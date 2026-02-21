@@ -1,37 +1,36 @@
 # src/app/pipelines/base.py
-
-from abc import ABC, abstractmethod
+from typing import Generic, TypeVar, Iterable, Callable, List, Any
 from ..ports.datastream import DataStream
 
-class BasePipeline(ABC):
-    def run(self, source: DataStream, sink: DataStream):
-        """The Template Method defining the skeleton of the ETL process."""
-        try:
-            with source, sink:
-                self.before_transfer(source, sink)
+class Pipeline:
+    def __init__(
+        self, 
+        source: DataStream, 
+        sink: DataStream,
+        processors: List[Callable[[Any], Any]] = []
+    ):
+        self.source = source
+        self.sink = sink
+        self.processors = processors
+
+    def run(self):
+        """
+        Orchestrates the flow between the Source and Sink DataStreams.
+        This method manages the context of both streams automatically.
+        """
+        # 1. Open both streams using their __enter__ methods
+        with self.source as src, self.sink as snk:
+            
+            # 2. Iterate through the source read generator
+            for chunk in src.read():
                 
-                for chunk in source.read():
-                    processed_chunk = self.transform(chunk)
-                    sink.write(processed_chunk)
+                # 3. Pass chunk through the middleware chain
+                processed_chunk = chunk
+                for process in self.processors:
+                    processed_chunk = process(processed_chunk)
+                    if processed_chunk is None:
+                        break
                 
-                self.after_transfer(source, sink)
-        except Exception as e:
-            self.on_error(e)
-            raise
-
-    def before_transfer(self, source, sink):
-        """Optional hook: e.g., Log start time or check disk space."""
-        pass
-
-    def transform(self, chunk):
-        """Optional hook: Default is a 'Pass-through' (no change)."""
-        return chunk
-
-    def after_transfer(self, source, sink):
-        """Optional hook: e.g., Update DB status to 'Complete'."""
-        pass
-
-    @abstractmethod
-    def on_error(self, error: Exception):
-        """Mandatory: Every pipeline must define how to handle failure."""
-        pass
+                # 4. If not filtered out, write to the sink
+                if processed_chunk is not None:
+                    snk.write(processed_chunk)
