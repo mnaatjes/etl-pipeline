@@ -1,0 +1,36 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyd
+*.pyo
+
+# C extensions
+*.so
+
+# Distribution / packaging
+.Python
+env/
+venv/
+build/
+develop-eggs/
+dist/
+eggs/
+*.egg-info
+.installed.cfg
+*.egg
+
+# Editors
+.vscode/
+.idea/
+
+# Tests
+.pytest_cache/
+
+# OS
+.DS_Store
+.Trashes
+*.swp
+
+# Specific project files
+*.env
+.env.*
