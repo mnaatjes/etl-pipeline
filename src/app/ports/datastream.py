@@ -1,8 +1,22 @@
 # src/app/ports/datastream.py
 
 from abc import ABC, abstractmethod
+from typing import Any
+
+from .policy import BasePolicy
 
 class DataStream(ABC):
+    def __init__(self, resource_configuration:Any, as_sink:bool=False, policy:BasePolicy|None=None) -> None:
+        """
+        The standard constructor for all DataStreams.
+        :param resource_config: The resolved path, URL, or DSN.
+        :param as_sink: Whether the stream is intended for writing (True) or reading (False).
+        """
+        # Assign Dependencies
+        self.resource_conf = resource_configuration
+        self.as_sink=as_sink
+        self._policy = policy
+
     @abstractmethod
     def open(self): pass
     
@@ -21,6 +35,14 @@ class DataStream(ABC):
     
     @abstractmethod
     def close(self): pass
+    
+    @abstractmethod
+    def exists(self) -> bool:
+        """
+        Check physical/external availability.
+        Returns True if the resource can be reached/accessed.
+        """
+        pass
 
     def __enter__(self):
         self.open()

@@ -1,12 +1,14 @@
 # src/infrastructure/streams/local.py
-from ...app import DataStream
 from pathlib import Path
+from ...app import DataStream, BasePolicy
 
 class LocalFileStream(DataStream):
-    def __init__(self, uri:str, mode:str="rb"): 
-        self.path   = uri.replace("file://", "") # File does not like protocol 'file://'; strip protocol
-        self._file  = None # Private Instance Attribute that holds the File Object, i.e. 'handle' or 'stream'
-        self.mode   = mode # Defaults to Read-Binary
+    def __init__(self, path:Path, policy:BasePolicy, as_sink:bool=False): 
+        super().__init__(str(path), as_sink=as_sink)
+        #self.path   = uri.replace("file://", "") # File does not like protocol 'file://'; strip protocol
+        self.path   = path # Converted to a path by StreamRegistry
+        self._file  = None # Private Instance Attribute that holds the File Object, i.e. 'handle' or 'stream'        
+        self.mode   = "wb" if self.as_sink else "rb"
 
     def open(self):
         """
@@ -60,3 +62,7 @@ class LocalFileStream(DataStream):
             self._file.close()
             # Reset to None for safety
             self._file = None
+
+    def exists(self) -> bool:
+        """Checks the physical Linux filesystem."""
+        return self.path.exists()

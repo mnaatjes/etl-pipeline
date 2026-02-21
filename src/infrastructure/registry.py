@@ -1,30 +1,56 @@
 # src/infrastructure/registry.py
-from ..app import DataStream
+
+# Libraries
+from dataclasses import dataclass
+from typing import Type, Optional
+# Dependencies
+from ..app import DataStream, BasePolicy
 from .streams.local import LocalFileStream
 from .streams.http import RemoteHttpStream
 from .streams.db_table import DbTableStream
 
+@dataclass(frozen=True)
+class ProtocolRegistration:
+    adapter_cls: Type[DataStream]
+    policy: Optional[BasePolicy]
+
 class StreamRegistry:
     def __init__(self):
-        self._protocols = {
-            "file://": LocalFileStream,
-            "http://": RemoteHttpStream,
-            "https://": RemoteHttpStream,
-            "db://": DbTableStream
-        }
+        # Protocols will be mapped at bootstrap phase
+        self._protocols: dict[str, ProtocolRegistration] = {}
 
-    def get_stream(self, uri: str) -> DataStream:
+    def register(self, protocol:str, adapter_cls:Type[DataStream], policy:BasePolicy|None=None) -> None:
+        self._protocols[protocol] = ProtocolRegistration(
+            adapter_cls=adapter_cls,
+            policy=policy
+        )
+
+    def get_stream(self, uri:str, as_sink:bool=False) -> DataStream:
         """
         Method acts as a Factory. 
-        It looks at the URI "scheme," identifies which technical adapter is required, 
-        and returns an initialized instance of that adapter—all while the rest of your code thinks it’s just 
-        dealing with a generic DataStream.
+        - Identifies URI stream
+        - Sorts by DataStream implementation
+        - Injects appropriate policy
+        - Passes boolean 'is_sink'; e.g. determines mode in LocalDataStream
         """
-        for proto, stream_class in self._protocols.items():
-            if uri.startswith(proto):
-                # Does NOT strip protocol
-                resource = uri
-                return stream_class(resource)
+        protocol = uri.split("://")[0]
+        # Validate Protocol
+        if protocol not in self._protocols:
+            raise ValueError(f"The following protocol has not been registed with an adapter: {protocol}")
         
-        # Cannot find registered stream
-        raise ValueError(f"No adapter registered for: {uri}")
+        # Aid IDE by storing ProtocolRegistration in variable
+        registration = self._protocols[protocol]
+        # Resolve URI if there is a policy; otherwire send uri
+        resolved = registration.policy.resolve(uri) if registration.policy else uri
+        # Instantiate DataStream and return
+        if registration.policy:                
+            return registration.adapter_cls(
+                resolved,
+                as_sink=as_sink,
+                policy=registration.policy
+            )
+        else:
+            return registration.adapter_cls(
+                resolved,
+                as_sink=as_sink
+            )
