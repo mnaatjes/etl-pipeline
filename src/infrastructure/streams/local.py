@@ -1,10 +1,12 @@
 # src/infrastructure/streams/local.py
 from ...app import DataStream
+from pathlib import Path
 
 class LocalFileStream(DataStream):
-    def __init__(self, path): 
-        self.path   = path
+    def __init__(self, uri:str, mode:str="rb"): 
+        self.path   = uri.replace("file://", "") # File does not like protocol 'file://'; strip protocol
         self._file  = None # Private Instance Attribute that holds the File Object, i.e. 'handle' or 'stream'
+        self.mode   = mode # Defaults to Read-Binary
 
     def open(self):
         """
@@ -15,7 +17,13 @@ class LocalFileStream(DataStream):
         
         Virtually zero memory Impact and allows OS to reserve the resource
         """
-        self._file = open(self.path, 'rb')
+        # Check if mode correct and path created
+        if "w" in self.mode:
+            dir = Path(self.path).parent
+            if dir and not dir.exists():
+                raise NotADirectoryError(f"Directory does NOT Exist at path: {self.path}")
+            
+        self._file = open(self.path, self.mode)
 
     def read(self): 
         """
@@ -37,11 +45,14 @@ class LocalFileStream(DataStream):
         """
         Implementation of the write capability.
         """
-        if not self._file:
-            raise IOError("Stream not open for writing")
-        
-        self._file.write(chunk)
+        # Check file is open
+        if self._file is None:
+            raise IOError("Stream is not open.")
+        # Check file has correct mode for write operations
+        if "w" not in self.mode and "a" not in self.mode:
+            raise IOError(f"Stream opened with mode '{self.mode}' does not support writing.")
 
+        self._file.write(chunk)
 
     def close(self): 
         # Only attempt to close if handle exists

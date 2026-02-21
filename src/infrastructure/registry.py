@@ -22,9 +22,8 @@ class StreamRegistry:
         """
         for proto, stream_class in self._protocols.items():
             if uri.startswith(proto):
-                # Strip protocol to get the actual path/url
-                # 'file:///var/log/syslog' becomes '/var/log/syslog'
-                resource = uri.replace(proto, "")
+                # Does NOT strip protocol
+                resource = uri
                 return stream_class(resource)
         
         # Cannot find registered stream
