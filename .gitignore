@@ -11,6 +11,7 @@ __pycache__/
 .Python
 env/
 venv/
+.venv/
 build/
 develop-eggs/
 dist/
@@ -25,6 +26,8 @@ eggs/
 
 # Tests
 .pytest_cache/
+tests/
+data/
 
 # OS
 .DS_Store
