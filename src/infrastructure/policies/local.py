@@ -1,7 +1,8 @@
 # src/infrastructure/policies/local.py
 from typing import Any
 from pathlib import Path
-from ...app import BasePolicy
+# Use the 'app' gateway
+from src.app import BasePolicy
 
 """
 Local DataStream Implementation - Filesystem - Policy / Registry

@@ -15,14 +15,15 @@ class ProtocolRegistration:
     policy: Optional[BasePolicy]
 
 class StreamRegistry:
-    def __init__(self):
+    def __init__(self, chunk_size:int):
         # Protocols will be mapped at bootstrap phase
         self._protocols: dict[str, ProtocolRegistration] = {}
+        self._chunk_size = chunk_size
 
     def register(self, protocol:str, adapter_cls:Type[DataStream], policy:BasePolicy|None=None) -> None:
         self._protocols[protocol] = ProtocolRegistration(
             adapter_cls=adapter_cls,
-            policy=policy
+            policy=policy,
         )
 
     def get_stream(self, uri:str, as_sink:bool=False) -> DataStream:
@@ -46,11 +47,13 @@ class StreamRegistry:
         if registration.policy:                
             return registration.adapter_cls(
                 resolved,
+                chunk_size=self._chunk_size,
                 as_sink=as_sink,
                 policy=registration.policy
             )
         else:
             return registration.adapter_cls(
                 resolved,
+                chunk_size=self._chunk_size,
                 as_sink=as_sink
             )

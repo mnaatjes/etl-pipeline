@@ -6,7 +6,7 @@ from typing import Any
 from .policy import BasePolicy
 
 class DataStream(ABC):
-    def __init__(self, resource_configuration:Any, as_sink:bool=False, policy:BasePolicy|None=None) -> None:
+    def __init__(self, resource_configuration:Any, chunk_size:int, as_sink:bool=False, policy:BasePolicy|None=None) -> None:
         """
         The standard constructor for all DataStreams.
         :param resource_config: The resolved path, URL, or DSN.
@@ -14,6 +14,7 @@ class DataStream(ABC):
         """
         # Assign Dependencies
         self.resource_conf = resource_configuration
+        self._chunk_size = chunk_size
         self.as_sink=as_sink
         self._policy = policy
 

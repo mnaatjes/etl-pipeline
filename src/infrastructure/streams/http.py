@@ -1,18 +1,17 @@
 # src/infrastructure/streams/http.py
 import httpx
-from typing import Optional, ContextManager
-from ...app import DataStream
+from typing import Optional, ContextManager, Any
 
-import httpx
-from typing import Any
-from src.app.ports.datastream import DataStream
+# Use the 'app' gateway
+from src.app import DataStream
 
+# TODO: Allow for taking of a config dataclass for all Streams
 class RemoteHttpStream(DataStream):
-    def __init__(self, url: str, as_sink: bool=False):
+    def __init__(self, url: str, chunk_size:int, as_sink: bool=False):
         # Ensure not attempting sink before initialization of super()
         if as_sink:
             raise NotImplementedError("HTTP Sink not supported.")
-        super().__init__(url, as_sink)
+        super().__init__(url, chunk_size, as_sink)
         self.url = url
         self._client:Optional[httpx.Client]=None
         self._response: Optional[httpx.Response]=None   # Actual Responce Object
@@ -49,7 +48,7 @@ class RemoteHttpStream(DataStream):
             raise RuntimeError("Stream not opened. Use 'with' statement.")
         
         # Standard 4KB chunks for Linux-friendly I/O
-        for chunk in self._response.iter_bytes(chunk_size=4096):
+        for chunk in self._response.iter_bytes(self._chunk_size):
             yield chunk
 
     def close(self):
