@@ -1,9 +1,10 @@
 # src/infrastructure/streams/http.py
 import httpx
-from typing import Optional, ContextManager, Any
+from typing import Optional, ContextManager, Iterator
 
 # Use the 'app' gateway
 from src.app import DataStream
+from src.app.ports.envelope import Envelope
 
 # TODO: Allow for taking of a config dataclass for all Streams
 class RemoteHttpStream(DataStream):
@@ -27,7 +28,7 @@ class RemoteHttpStream(DataStream):
             except httpx.RequestError:
                 return False
 
-    def open(self):
+    def open(self) -> None:
         """Establish the streaming connection."""
         self._client = httpx.Client(follow_redirects=True)
         # 1. Create the stream context manager
@@ -43,13 +44,22 @@ class RemoteHttpStream(DataStream):
         # 4. Raise exceptions if any
         self._response.raise_for_status()
 
-    def read(self):
+    def read(self) -> Iterator[Envelope]:
         if not self._response:
             raise RuntimeError("Stream not opened. Use 'with' statement.")
         
         # Standard 4KB chunks for Linux-friendly I/O
-        for chunk in self._response.iter_bytes(self._chunk_size):
-            yield chunk
+        # Track the index to add value to our metadata
+        for i, chunk in enumerate(self._response.iter_bytes(self._chunk_size)):
+            yield Envelope(
+                payload=chunk, # bytes wrapped here as payload
+                regime="BYTES",
+                metadata={
+                    "source": self.url,
+                    "chunk_index": i,
+                    "bytes_read": len(chunk)
+                }
+            )
 
     def close(self):
         # 1. Close Context Manager

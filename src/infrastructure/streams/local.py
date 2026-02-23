@@ -1,7 +1,9 @@
 # src/infrastructure/streams/local.py
 from pathlib import Path
+from typing import Iterator
 # Use the 'app' gateway
 from src.app import DataStream, BasePolicy
+from src.app.ports.envelope import Envelope
 
 class LocalFileStream(DataStream):
     def __init__(self, path:Path, policy:BasePolicy, chunk_size:int, as_sink:bool=False): 
@@ -11,7 +13,7 @@ class LocalFileStream(DataStream):
         self.mode   = "wb" if self.as_sink else "rb"
         self._policy = policy
 
-    def open(self):
+    def open(self) -> None:
         """
         Handshake
         - Checks if exists
@@ -28,7 +30,7 @@ class LocalFileStream(DataStream):
             
         self._file = open(self.path, self.mode, buffering=self._chunk_size)
 
-    def read(self): 
+    def read(self) -> Iterator[Envelope]: 
         """
         Heavy Lifting
         - Reads the file in small chunks
@@ -41,10 +43,23 @@ class LocalFileStream(DataStream):
                 f"Stream for {self.path} must be opened before reading. "
                 "Did you forget to use a 'with' statement?"
             )
-        # Perform chunking
-        while chunk := self._file.read(self._chunk_size): yield chunk
 
-    def write(self, chunk: bytes):
+        # Read binary chunks and wrap in Envelope
+        counter = 0
+        while chunk := self._file.read(self._chunk_size):
+            # Wrap in Envelope DTO
+            yield Envelope(
+                payload=chunk,
+                regime="BYTES",
+                metadata={
+                    "path": str(self.path),
+                    "chunk_index": counter,
+                    "bytes_read": len(chunk)
+                }
+            )
+            counter += 1
+
+    def write(self, envelope:Envelope):
         """
         Implementation of the write capability.
         """
@@ -54,6 +69,9 @@ class LocalFileStream(DataStream):
         # Check file has correct mode for write operations
         if "w" not in self.mode and "a" not in self.mode:
             raise IOError(f"Stream opened with mode '{self.mode}' does not support writing.")
+        
+        # Unwrap chunk from Envelope
+        chunk = envelope.payload
         
         # Guard against un-chunked blocks and leaking chunks
         if len(chunk) > self._chunk_size * 2:

@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE nmaprun>
+<?xml-stylesheet href="file:///usr/bin/../share/nmap/nmap.xsl" type="text/xsl"?>
+<!-- Nmap 7.94SVN scan initiated Mon Feb 23 19:04:51 2026 as: nmap -sn -oX scan.xml 192.168.1.0/24 -->
+<nmaprun scanner="nmap" args="nmap -sn -oX scan.xml 192.168.1.0/24" start="1771873491" startstr="Mon Feb 23 19:04:51 2026" version="7.94SVN" xmloutputversion="1.05">
+<verbose level="0"/>
+<debugging level="0"/>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.1" addrtype="ipv4"/>
+<address addr="4C:19:5D:5A:9D:8B" addrtype="mac" vendor="Sagemcom Broadband SAS"/>
+<hostnames>
+<hostname name="_gateway" type="PTR"/>
+</hostnames>
+<times srtt="2887" rttvar="5000" to="100000"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.39" addrtype="ipv4"/>
+<address addr="60:92:C8:B3:3A:AC" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<times srtt="76054" rttvar="76054" to="380270"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.47" addrtype="ipv4"/>
+<address addr="72:70:54:5D:6C:91" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<times srtt="206736" rttvar="206736" to="1033680"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.62" addrtype="ipv4"/>
+<address addr="D4:BE:DC:31:FC:C0" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<times srtt="184071" rttvar="184071" to="920355"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.85" addrtype="ipv4"/>
+<address addr="20:16:B9:D2:70:58" addrtype="mac" vendor="Intel Corporate"/>
+<hostnames>
+</hostnames>
+<times srtt="105783" rttvar="105783" to="528915"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.103" addrtype="ipv4"/>
+<address addr="B8:97:5A:B6:01:F5" addrtype="mac" vendor="Biostar Microtech Int&apos;l"/>
+<hostnames>
+</hostnames>
+<times srtt="5917" rttvar="5917" to="100000"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.112" addrtype="ipv4"/>
+<address addr="0C:8B:7D:8C:E1:F2" addrtype="mac" vendor="Vizio"/>
+<hostnames>
+</hostnames>
+<times srtt="142620" rttvar="142620" to="713100"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.160" addrtype="ipv4"/>
+<address addr="0E:1F:84:DB:D1:B7" addrtype="mac"/>
+<hostnames>
+</hostnames>
+<times srtt="201202" rttvar="162078" to="849514"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.215" addrtype="ipv4"/>
+<address addr="18:A6:F7:49:46:56" addrtype="mac" vendor="TP-Link Technologies"/>
+<hostnames>
+</hostnames>
+<times srtt="74501" rttvar="74501" to="372505"/>
+</host>
+<host><status state="up" reason="arp-response" reason_ttl="0"/>
+<address addr="192.168.1.226" addrtype="ipv4"/>
+<address addr="40:99:22:E4:03:05" addrtype="mac" vendor="AzureWave Technology"/>
+<hostnames>
+</hostnames>
+<times srtt="139925" rttvar="139925" to="699625"/>
+</host>
+<host><status state="up" reason="localhost-response" reason_ttl="0"/>
+<address addr="192.168.1.146" addrtype="ipv4"/>
+<hostnames>
+<hostname name="hpprodesk" type="PTR"/>
+</hostnames>
+</host>
+<runstats><finished time="1771873495" timestr="Mon Feb 23 19:04:55 2026" summary="Nmap done at Mon Feb 23 19:04:55 2026; 256 IP addresses (11 hosts up) scanned in 4.03 seconds" elapsed="4.03" exit="success"/><hosts up="11" down="245" total="256"/>
+</runstats>
+</nmaprun>

@@ -1,9 +1,10 @@
 # src/app/ports/datastream.py
 
 from abc import ABC, abstractmethod
-from typing import Any
+from typing import Any, Iterator
 
 from .policy import BasePolicy
+from src.app.ports.envelope import Envelope
 
 class DataStream(ABC):
     def __init__(self, resource_configuration:Any, chunk_size:int, as_sink:bool=False, policy:BasePolicy|None=None) -> None:
@@ -19,12 +20,14 @@ class DataStream(ABC):
         self._policy = policy
 
     @abstractmethod
-    def open(self): pass
+    def open(self) -> None: pass
     
     @abstractmethod
-    def read(self): yield from []
+    def read(self) -> Iterator[Envelope]:
+        """Implementation must yield an Envelope object(s)"""
+        yield from []
 
-    def write(self, chunk: bytes):
+    def write(self, envelope:Envelope) -> None:
         """
         Default implementation. 
         We don't use @abstractmethod so that Read-Only adapters 
