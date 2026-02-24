@@ -7,17 +7,25 @@ from .policy import BasePolicy
 from src.app.ports.envelope import Envelope
 
 class DataStream(ABC):
-    def __init__(self, resource_configuration:Any, chunk_size:int, as_sink:bool=False, policy:BasePolicy|None=None) -> None:
+    def __init__(
+            self, 
+            resource_configuration:Any, 
+            chunk_size:int,
+            as_sink:bool=False, 
+            policy:BasePolicy|None=None,
+            use_lines:bool=False
+    ) -> None:
         """
         The standard constructor for all DataStreams.
         :param resource_config: The resolved path, URL, or DSN.
         :param as_sink: Whether the stream is intended for writing (True) or reading (False).
         """
         # Assign Dependencies
-        self.resource_conf = resource_configuration
+        self._resource_conf = resource_configuration
         self._chunk_size = chunk_size
-        self.as_sink=as_sink
+        self._as_sink=as_sink
         self._policy = policy
+        self._use_lines = use_lines
 
     @abstractmethod
     def open(self) -> None: pass

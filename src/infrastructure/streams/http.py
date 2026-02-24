@@ -8,11 +8,11 @@ from src.app.ports.envelope import Envelope
 
 # TODO: Allow for taking of a config dataclass for all Streams
 class RemoteHttpStream(DataStream):
-    def __init__(self, url: str, chunk_size:int, as_sink: bool=False):
+    def __init__(self, url: str, chunk_size:int, as_sink: bool=False, use_lines:bool=False):
         # Ensure not attempting sink before initialization of super()
         if as_sink:
             raise NotImplementedError("HTTP Sink not supported.")
-        super().__init__(url, chunk_size, as_sink)
+        super().__init__(url, chunk_size=chunk_size, as_sink=as_sink, use_lines=use_lines)
         self.url = url
         self._client:Optional[httpx.Client]=None
         self._response: Optional[httpx.Response]=None   # Actual Responce Object
@@ -48,18 +48,36 @@ class RemoteHttpStream(DataStream):
         if not self._response:
             raise RuntimeError("Stream not opened. Use 'with' statement.")
         
-        # Standard 4KB chunks for Linux-friendly I/O
-        # Track the index to add value to our metadata
-        for i, chunk in enumerate(self._response.iter_bytes(self._chunk_size)):
-            yield Envelope(
-                payload=chunk, # bytes wrapped here as payload
-                regime="BYTES",
-                metadata={
-                    "source": self.url,
-                    "chunk_index": i,
-                    "bytes_read": len(chunk)
-                }
-            )
+        if self._use_lines:
+            # PATH A: Line-Buffered Streaming (Safe for JSON/CSV)
+            # iter_lines() handles the partial packet buffering for us
+            for i, line in enumerate(self._response.iter_lines()):
+                if not line:
+                    continue  # Skip empty keep-alive chunks
+
+                yield Envelope(
+                    payload=line,
+                    regime="BYTES",
+                    metadata={
+                        "source": self.url,
+                        "chunk_index": i,
+                        "bytes_read": len(line),
+                        "stream_mode": "line_buffered"
+                    }
+                )
+        else:
+            # PATH B: Block-Buffered Streaming (Standard for binary/blobs)
+            for i, chunk in enumerate(self._response.iter_bytes(self._chunk_size)):
+                yield Envelope(
+                    payload=chunk,
+                    regime="BYTES",
+                    metadata={
+                        "source": self.url,
+                        "chunk_index": i,
+                        "bytes_read": len(chunk),
+                        "stream_mode": "block_buffered"
+                    }
+                )
 
     def close(self):
         # 1. Close Context Manager

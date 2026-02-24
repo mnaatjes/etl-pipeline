@@ -11,6 +11,7 @@ from .pipelines.base import Pipeline # FIX: Add the dot before pipelines
 
 # Base Middleware Ports
 from .ports.middleware import (
+    BaseMiddleware,
     ByteMiddleware,
     ObjectMiddleware
 )
@@ -21,7 +22,7 @@ __all__ = [
     "middleware",      # The implementation sub-package
     "DataStream",
     "BasePolicy",
-    "ByteMiddleware",  # The abstract interface
-    "ObjectMiddleware",  # The abstract interface
+    #"ByteMiddleware",  # The abstract interface
+    #"ObjectMiddleware",  # The abstract interface
     "Pipeline"
 ]

@@ -1,9 +1,12 @@
 # src/app/ports/envelope.py
 from dataclasses import dataclass, field
-from typing import Any, Dict
+from typing import Any, Dict, Literal
+
+# Define Regimes
+RegimeType = Literal["BYTES", "OBJECT"]
 
 @dataclass
 class Envelope:
     payload: Any
-    regime: str  # e.g., "BYTES" or "OBJECT"
+    regime: RegimeType
     metadata: Dict[str, Any] = field(default_factory=dict)
