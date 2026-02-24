@@ -13,5 +13,6 @@ src/app/middleware/
 from . import telemetry as metrics
 from . import encoders as convert
 from . import security as auth
+from . import filters as filter
 
-__all__ = ["metrics", "convert", "auth"]
+__all__ = ["metrics", "convert", "auth", "filter"]

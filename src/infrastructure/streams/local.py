@@ -6,9 +6,9 @@ from src.app import DataStream, BasePolicy
 from src.app.ports.envelope import Envelope
 
 class LocalFileStream(DataStream):
-    def __init__(self, path:Path, policy:BasePolicy, chunk_size:int, as_sink:bool=False, use_lines:bool=False): 
-        super().__init__(str(path), policy=policy, chunk_size=chunk_size, as_sink=as_sink, use_lines=use_lines)
-        self.path   = path # Converted to a path by StreamRegistry
+    def __init__(self, resource_configuration:Path, policy:BasePolicy, chunk_size:int, as_sink:bool=False, use_lines:bool=False): 
+        super().__init__(str(resource_configuration), policy=policy, chunk_size=chunk_size, as_sink=as_sink, use_lines=use_lines)
+        self.path   = resource_configuration # Converted to a path by StreamRegistry
         self.mode   = "wb" if self._as_sink else "rb"
         self._file  = None # Private Instance Attribute that holds the File Object, i.e. 'handle' or 'stream'
 
@@ -110,7 +110,7 @@ class LocalFileStream(DataStream):
             raise ValueError(f"Cannot create a source {self.__class__.__name__} without a Valid Policy!")
         # Return new LocalFileStream as source
         return LocalFileStream(
-            path=self.path,
+            resource_configuration=self.path,
             policy=self._policy,
             chunk_size=self._chunk_size,
             as_sink=False,

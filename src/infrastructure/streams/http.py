@@ -8,12 +8,12 @@ from src.app.ports.envelope import Envelope
 
 # TODO: Allow for taking of a config dataclass for all Streams
 class RemoteHttpStream(DataStream):
-    def __init__(self, url: str, chunk_size:int, as_sink: bool=False, use_lines:bool=False):
+    def __init__(self, resource_configuration: str, chunk_size:int, as_sink: bool=False, use_lines:bool=False):
         # Ensure not attempting sink before initialization of super()
         if as_sink:
             raise NotImplementedError("HTTP Sink not supported.")
-        super().__init__(url, chunk_size=chunk_size, as_sink=as_sink, use_lines=use_lines)
-        self.url = url
+        super().__init__(resource_configuration, chunk_size=chunk_size, as_sink=as_sink, use_lines=use_lines)
+        self.url = resource_configuration
         self._client:Optional[httpx.Client]=None
         self._response: Optional[httpx.Response]=None   # Actual Responce Object
         self._context: Optional[ContextManager]=None    # Context Manager returned by httpx.stream()
@@ -49,19 +49,19 @@ class RemoteHttpStream(DataStream):
             raise RuntimeError("Stream not opened. Use 'with' statement.")
         
         if self._use_lines:
-            # PATH A: Line-Buffered Streaming (Safe for JSON/CSV)
-            # iter_lines() handles the partial packet buffering for us
+            # We are still using the line-buffering strategy!
             for i, line in enumerate(self._response.iter_lines()):
                 if not line:
-                    continue  # Skip empty keep-alive chunks
+                    continue
+
+                # We normalize everything to bytes so the 'BYTES' regime is honest
+                payload = line if isinstance(line, bytes) else line.encode('utf-8')
 
                 yield Envelope(
-                    payload=line,
-                    regime="BYTES",
+                    payload=payload, 
+                    regime="BYTES", # The label matches the content now
                     metadata={
-                        "source": self.url,
                         "chunk_index": i,
-                        "bytes_read": len(line),
                         "stream_mode": "line_buffered"
                     }
                 )

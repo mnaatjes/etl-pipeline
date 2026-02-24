@@ -17,20 +17,35 @@ class Pipeline:
         """
         Orchestrates the flow between the Source and Sink DataStreams.
         This method manages the context of both streams automatically.
+        Standardizes the data flow using Generator-based Middlewares.
+        Handles 1-to-0, 1-to-1, and 1-to-Many data transformations.
         """
-        # 1. Open both streams using their __enter__ methods
         with self.source as src, self.sink as snk:
-            
-            # 2. Iterate through the source read generator
-            for chunk in src.read():
+        # 1. Start the Source Stream
+            for source_envelope in src.read():
                 
-                # 3. Pass chunk through the middleware chain
-                processed_chunk = chunk
-                for process in self.processors:
-                    processed_chunk = process(processed_chunk)
-                    if processed_chunk is None:
+                # 2. Initialize the 'Working Set' for this specific chunk
+                # We wrap the source envelope in a list to start the chain
+                working_set = [source_envelope]
+
+                # 3. Iterate through the Middleware Chain
+                for processor in self.processors:
+                    next_set = []
+                    
+                    # Each processor consumes the current working set
+                    for env in working_set:
+                        # 'processor(env)' is now a generator/iterator
+                        for processed_env in processor(env):
+                            # Collect all outputs (0, 1, or Many)
+                            next_set.append(processed_env)
+                    
+                    # The output of this processor becomes the input for the next
+                    working_set = next_set
+
+                    # Optimization: If the set is empty, stop processing this chunk
+                    if not working_set:
                         break
-                
-                # 4. If not filtered out, write to the sink
-                if processed_chunk is not None:
-                    snk.write(processed_chunk)
+            
+                # 4. Final delivery to the Sink
+                for final_envelope in working_set:
+                    snk.write(final_envelope)

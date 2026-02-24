@@ -1,54 +1,52 @@
 # /srv/pipeline/src/app/middleware/telemetry.py
 import time
-from typing import Any, Dict
+from typing import Any, Dict, Iterator
 from datetime import timedelta
-from src.app.ports.envelope import Envelope
+from src.app.ports.envelope import Envelope, RegimeType
 from src.app.ports.middleware import BaseMiddleware
-"""
-Regime Agnostic Middleware
-"""
-    
 
 class RowCounter(BaseMiddleware):
-    """Counts the number of rows/chunks in the processed data"""
+    """Counts the number of logical units passing through the pipeline."""
+    
     def __init__(self):
+        super().__init__(input_regime=RegimeType.ANY, output_regime=RegimeType.ANY)
         self.count = 0
     
-    def __call__(self, envelope:Envelope) -> Envelope:
-        # Increment property
+    def process(self, payload: Any) -> Iterator[Any]:
+        # Increment internal state
         self.count += 1
-        # Handle metadata
-        self.metadata_hook(envelope.metadata)
-        # Return Envelope
-        return envelope
+        
+        # Generator requirement: yield the payload to keep the pipe flowing
+        yield payload
     
     def metadata_hook(self, metadata: Dict[str, Any]) -> None:
-        metadata["pipeline_count_id"] = self.count
-
+        # We use count + 1 so the metadata reflects the current object index
+        metadata["pipeline_count_id"] = self.count + 1
 
 class ExecutionTimer(BaseMiddleware):
+    """Calculates start, end, and duration of the pipeline execution."""
+
     def __init__(self):
-        """Calculates start, end, and duration of process in pipeline"""
+        super().__init__(input_regime=RegimeType.ANY, output_regime=RegimeType.ANY)
+
         self.start_time: float = 0.0
         self.end_time: float = 0.0
 
-    def __call__(self, envelope:Envelope) -> Envelope:
-        # Init Start time
+    def process(self, payload: Any) -> Iterator[Any]:
         now = time.perf_counter()
+        
+        # Initialize start_time on the very first unit that hits this middleware
         if self.start_time == 0.0:
             self.start_time = now
 
-        # Update End Time
+        # Record the most recent pulse
         self.end_time = now
-
-        # Handle metadata
-        self.metadata_hook(envelope.metadata, now)
-        # Return Envelope
-        return envelope
+        
+        yield payload
     
-    def metadata_hook(self, metadata: Dict[str, Any], timestamp: float) -> None:
-        # Record the precise moment this chunk hit this specific telemetry point
-        metadata["arrival_timestamp"] = timestamp
+    def metadata_hook(self, metadata: Dict[str, Any]) -> None:
+        # Arrival timestamp for this specific unit
+        metadata["arrival_timestamp"] = time.perf_counter()
 
     @property
     def duration(self) -> float:
@@ -56,4 +54,5 @@ class ExecutionTimer(BaseMiddleware):
     
     @property
     def readable_time(self) -> str:
+        # Converts duration (float) to a human-readable HH:MM:SS format
         return str(timedelta(seconds=self.duration))

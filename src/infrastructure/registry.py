@@ -5,9 +5,9 @@ from dataclasses import dataclass
 from typing import Type, Optional
 # Dependencies
 from src.app import DataStream, BasePolicy
-from .streams.local import LocalFileStream
-from .streams.http import RemoteHttpStream
-from .streams.db_table import DbTableStream
+#from .streams.local import LocalFileStream
+#from .streams.http import RemoteHttpStream
+#from .streams.db_table import DbTableStream
 
 @dataclass(frozen=True)
 class ProtocolRegistration:
@@ -26,7 +26,7 @@ class StreamRegistry:
             policy=policy,
         )
 
-    def get_stream(self, uri:str, as_sink:bool=False) -> DataStream:
+    def get_stream(self, uri:str, as_sink:bool=False, use_lines=False) -> DataStream:
         """
         Method acts as a Factory. 
         - Identifies URI stream
@@ -43,17 +43,16 @@ class StreamRegistry:
         registration = self._protocols[protocol]
         # Resolve URI if there is a policy; otherwire send uri
         resolved = registration.policy.resolve(uri) if registration.policy else uri
-        # Instantiate DataStream and return
-        if registration.policy:                
-            return registration.adapter_cls(
-                resolved,
-                chunk_size=self._chunk_size,
-                as_sink=as_sink,
-                policy=registration.policy
-            )
-        else:
-            return registration.adapter_cls(
-                resolved,
-                chunk_size=self._chunk_size,
-                as_sink=as_sink
-            )
+        
+        # Assign DataStream Properties
+        properties = {
+            "resource_configuration": resolved,
+            "chunk_size": self._chunk_size,
+            "as_sink": as_sink,
+            "use_lines": use_lines
+        }
+
+        if registration.policy:
+            properties["policy"] = registration.policy
+
+        return registration.adapter_cls(**properties)

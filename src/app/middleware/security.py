@@ -1,19 +1,25 @@
-# /srv/pipeline/src/app/middleware/security.py
-
+# src/app/middleware/security.py
 import hashlib
-from typing import Any
-from ..ports.middleware import ByteMiddleware
+from typing import Iterator
+from src.app.ports.middleware import ByteMiddleware
 
-class SHA256Hasher(ByteMiddleware):
+class Sha256Hasher(ByteMiddleware):
+    """
+    Calculates a running SHA256 checksum of the byte stream.
+    Does not modify the payload; passes it through exactly as is.
+    """
     def __init__(self):
+        super().__init__()
         self._sha256 = hashlib.sha256()
 
-    def process(self, item:bytes) -> bytes:
-        # Ensure we are hashing bytes. 
-        # If your middleware up-leveled to dict, you'd need to re-encode to bytes here.
-        if isinstance(item, bytes):
-            self._sha256.update(item)
-        return item
+    def process(self, payload: bytes) -> Iterator[bytes]:
+        # 1. Update the running hash state with the new chunk
+        self._sha256.update(payload)
+        
+        # 2. Yield the payload unchanged (Pass-through)
+        yield payload
 
-    def get_hash(self) -> str:
+    @property
+    def hex_digest(self) -> str:
+        """Return the final checksum as a hex string."""
         return self._sha256.hexdigest()

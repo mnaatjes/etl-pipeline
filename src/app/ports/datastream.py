@@ -19,6 +19,7 @@ class DataStream(ABC):
         The standard constructor for all DataStreams.
         :param resource_config: The resolved path, URL, or DSN.
         :param as_sink: Whether the stream is intended for writing (True) or reading (False).
+        :param use_lines: Optimization Flag for NDJSON and other line-by-line read() requirements
         """
         # Assign Dependencies
         self._resource_conf = resource_configuration
