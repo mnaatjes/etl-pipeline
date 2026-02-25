@@ -4,7 +4,7 @@ from typing import Optional, ContextManager, Iterator
 
 # Use the 'app' gateway
 from src.app import DataStream
-from src.app.ports.envelope import Envelope
+from src.app.ports.envelope import Envelope, RegimeType
 
 # TODO: Allow for taking of a config dataclass for all Streams
 class RemoteHttpStream(DataStream):
@@ -59,7 +59,7 @@ class RemoteHttpStream(DataStream):
 
                 yield Envelope(
                     payload=payload, 
-                    regime="BYTES", # The label matches the content now
+                    regime=RegimeType.BYTES,
                     metadata={
                         "chunk_index": i,
                         "stream_mode": "line_buffered"
@@ -70,7 +70,7 @@ class RemoteHttpStream(DataStream):
             for i, chunk in enumerate(self._response.iter_bytes(self._chunk_size)):
                 yield Envelope(
                     payload=chunk,
-                    regime="BYTES",
+                    regime=RegimeType.BYTES,
                     metadata={
                         "source": self.url,
                         "chunk_index": i,

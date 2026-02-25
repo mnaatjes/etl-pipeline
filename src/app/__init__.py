@@ -6,6 +6,7 @@ from . import middleware  # This is the directory of implementations
 
 # --- Expose Ports (Abstracts) ---
 from .ports.datastream import DataStream
+from .ports.decorator import Decorator
 from .ports.policy import BasePolicy
 from .pipelines.base import Pipeline # FIX: Add the dot before pipelines
 
@@ -24,5 +25,6 @@ __all__ = [
     "BasePolicy",
     #"ByteMiddleware",  # The abstract interface
     #"ObjectMiddleware",  # The abstract interface
-    "Pipeline"
+    "Pipeline",
+    "Decorator"
 ]

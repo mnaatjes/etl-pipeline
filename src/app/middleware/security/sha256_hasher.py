@@ -1,4 +1,3 @@
-# src/app/middleware/security.py
 import hashlib
 from typing import Iterator
 from src.app.ports.middleware import ByteMiddleware
