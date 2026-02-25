@@ -1,8 +1,4 @@
-# src/app/middleware/filters.py
-
-import io
-import json
-import csv
+# src/app/middleware/filters/json_record_aggregator.py
 from typing import Iterator
 from src.app.ports.middleware import StatefulMiddleware
 from src.app.ports.envelope import Envelope, RegimeType
