@@ -18,7 +18,6 @@ class HttpHeaderProbeDecorator(Decorator):
             with httpx.Client() as client:
                 response = client.head(self._inner._resource_conf)
                 self.headers = dict(response.headers)
-                print(f"[DECORATOR DEBUG] Captured {len(self.headers)} headers.")
         except httpx.RequestError as e:
             # Log error
             print(f"[WARNING] Header probe failed: {e}")
