@@ -18,6 +18,6 @@ class RegimeType(StrEnum):
 @dataclass
 class Envelope:
     payload: Any
-    regime: RegimeType = RegimeType.BYTES
+    regime: RegimeType|str = RegimeType.BYTES
     metadata: Dict[str, Any] = field(default_factory=dict)
     completeness: Completeness = Completeness.COMPLETE

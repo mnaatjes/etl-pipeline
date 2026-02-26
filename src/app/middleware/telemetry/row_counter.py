@@ -6,8 +6,8 @@ from src.app.ports.middleware import BaseMiddleware
 class RowCounter(BaseMiddleware):
     """Counts the number of logical units passing through the pipeline."""
     
-    def __init__(self):
-        super().__init__(input_regime=RegimeType.ANY, output_regime=RegimeType.ANY)
+    def __init__(self, regime:RegimeType|str = RegimeType.ANY):
+        super().__init__(input_regime=regime, output_regime=regime)
         self.count = 0
     
     def process(self, payload: Any) -> Iterator[Any]:

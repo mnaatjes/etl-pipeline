@@ -6,7 +6,13 @@ from src.app import DataStream, BasePolicy
 from src.app.ports.envelope import Envelope
 
 class LocalFileStream(DataStream):
-    def __init__(self, resource_configuration:Path, policy:BasePolicy, chunk_size:int, as_sink:bool=False, use_lines:bool=False): 
+    def __init__(self, resource_configuration:Path, policy:BasePolicy, chunk_size:int, as_sink:bool=False, use_lines:bool=False):
+        # GUARD: Use policy to resolve path
+        # Pass safe path to super() as resource_configuration
+        resolved_path = policy.resolve(str(resource_configuration))
+        print(f"\nPath: {str(resource_configuration)}")
+        print(f"Resolved: {resolved_path}")
+        
         super().__init__(str(resource_configuration), policy=policy, chunk_size=chunk_size, as_sink=as_sink, use_lines=use_lines)
         self.path   = resource_configuration # Converted to a path by StreamRegistry
         self.mode   = "wb" if self._as_sink else "rb"
