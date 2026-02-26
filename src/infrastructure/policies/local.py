@@ -12,7 +12,19 @@ class LocalFilePolicy(BasePolicy):
     def __init__(self, anchors:dict[str,str]) -> None:
         # Convert stings from config to Path objects
         # NOTE: Anchors MUST already exist in the linux filesystem; e.g. like Database and DB Tables
-        self._anchors = {key: Path(val).resolve() for key, val in anchors.items()}
+        # ENFORCED: Fail-fast if anchor directory missing
+        self._anchors = {}
+        
+        for key, val in anchors.items():
+            p = Path(val).resolve()
+            if not p.exists():
+                raise FileNotFoundError(
+                    f"FATAL: Anchor '{key}' points to non-existant directory {p}"
+                    f"\nPlease create directory before initiating Local File Policy!"
+                )
+            
+            # Assign Anchors
+            self._anchors[key] = p
 
     def resolve(self, path: str) -> Path:
         # Collect Properties
@@ -42,7 +54,7 @@ class LocalFilePolicy(BasePolicy):
 
         clean = path.replace("file://", "").lstrip("/")
         key, *parts = clean.split("/")
-        print("\n")
+
         # Find path amongst anchors
         if key in self._anchors:
             anchor = self._anchors[key]
@@ -54,8 +66,7 @@ class LocalFilePolicy(BasePolicy):
 
             # Use Path.resolve() to collapse any relative pathlinks '../'
             full_path = anchor.joinpath(*parts).resolve()
-            print(f"Input Path: \t{str(path)}")
-            print(f"Output Path: \t{full_path}")
+
             # GUARD: Ensure path doesn't collapse above or out of anchor
             try:
                 full_path.relative_to(anchor)
