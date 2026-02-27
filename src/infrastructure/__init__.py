@@ -7,9 +7,9 @@ from . import policies
 from . import decorators
 
 # Optional: Promote most common implementations for easier access
-from .streams.http import RemoteHttpStream
-from .streams.local import LocalFileStream
-from .streams.db_table import DbTableStream
+from .streams.http.adapter import RemoteHttpStream
+from .streams.local.adapter import LocalFileStream
+#from .streams.db.adapter import DbTableStream
 from .policies.local import LocalFilePolicy
 from .decorators.http_probe import HttpHeaderProbeDecorator
 
@@ -22,6 +22,6 @@ __all__ = [
     "decorators",
     "RemoteHttpStream",
     "LocalFileStream",
-    "DbTableStream",
+    #"DbTableStream",
     "LocalFilePolicy"
 ]

@@ -1,14 +1,16 @@
 # /src/app/__init__.py
 
 from . import ports
-from . import pipelines
+from . import jobs
 from . import middleware  # This is the directory of implementations
 
 # --- Expose Ports (Abstracts) ---
 from .ports.datastream import DataStream
 from .ports.decorator import Decorator
 from .ports.policy import BasePolicy
-from .pipelines.base import Pipeline # FIX: Add the dot before pipelines
+from .jobs.base import Linear # FIX: Add the dot before pipelines
+from .ports.config import AppConfig
+from .ports.settings import StreamContract
 
 # Base Middleware Ports
 from .ports.middleware import (
@@ -18,13 +20,16 @@ from .ports.middleware import (
 )
 
 __all__ = [
+    # --- Major Packages ---
     "ports",
-    "pipelines",
-    "middleware",      # The implementation sub-package
+    "jobs",
+    "middleware",
+    # --- Configuration and Settings ---
+    "StreamContract",
+    "AppConfig",
+    # --- Major Ports ---
     "DataStream",
     "BasePolicy",
-    #"ByteMiddleware",  # The abstract interface
-    #"ObjectMiddleware",  # The abstract interface
-    "Pipeline",
+    "Linear",
     "Decorator"
 ]

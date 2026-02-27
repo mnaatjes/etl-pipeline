@@ -108,7 +108,7 @@ class LocalFileStream(DataStream):
     
     def as_source(self):
         """Returns a new instance of this stream configured for reading."""
-        from .local import LocalFileStream # Avoid circular import if needed
+        from .adapter import LocalFileStream
         # Check for policy
         if self._policy is None:
             raise ValueError(f"Cannot create a source {self.__class__.__name__} without a Valid Policy!")

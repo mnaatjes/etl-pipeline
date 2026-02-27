@@ -2,7 +2,7 @@
 from typing import Generic, TypeVar, Iterable, Callable, List, Any
 from ..ports.datastream import DataStream
 
-class Pipeline:
+class Linear:
     def __init__(
         self, 
         source: DataStream, 
