@@ -26,62 +26,65 @@ class LocalFilePolicy(BasePolicy):
             # Assign Anchors
             self._anchors[key] = p
 
-    def resolve(self, path: str) -> Path:
-        # Collect Properties
-        # - Convert input path to obj
-        # - Get cwd()
-        input_path   = Path(path)
-        project_root = Path.cwd()
-
-        # --- PATH A: Absolute Path Handing ---
-
-        if input_path.is_absolute():
-            # Check if full sys path
-            if not str(input_path).startswith(str(project_root)):
-                input_path = project_root / str(input_path).lstrip("/")
-
-            # Locate a match
+    def resolve(self, logical_uri: str) -> Path:
+        """
+        Translates a logical URI or physical path into a validated absolute Path.
+        Priority:
+        1. Identification: Is it already a physical path?
+        2. Translation: If logical, map the key to a physical anchor.
+        3. Validation: Strict boundary check (Chroot-lite).
+        """
+        # --- 1. Normalization ---
+        # Strip protocols and leading slashes to get a clean relative-style string
+        clean_path = str(logical_uri).replace("file://", "").lstrip("/")
+        input_path = Path(clean_path)
+        
+        # --- 2. Identity Check (Idempotency) ---
+        # If the input is already absolute (e.g. from a previous resolve), 
+        # check if it's already safe.
+        if Path(logical_uri).is_absolute():
+            abs_input = Path(logical_uri)
             for anchor_path in self._anchors.values():
                 try:
-                    # Check abs path is child of anchor
-                    input_path.relative_to(anchor_path)
-                    resolved = input_path.resolve()
-                    return resolved
+                    abs_input.relative_to(anchor_path)
+                    return abs_input.resolve() # Already physical and authorized
                 except ValueError:
                     continue
-        
-        # --- PATH B: Logical Category Handling ---
 
-        clean = path.replace("file://", "").lstrip("/")
-        key, *parts = clean.split("/")
-
-        # Find path amongst anchors
-        if key in self._anchors:
-            anchor = self._anchors[key]
-            # Strip redundant path parts: e.g. 'data/data/downloads/file.txt. --> 'data/downloads/file.txt'
-            anchor_segments = list(anchor.parts)
+        # --- 3. Logical Mapping ---
+        # Split into [key, sub_path...]
+        segments = input_path.parts
+        if not segments:
+            raise ValueError("Empty path provided to resolve()")
             
-            while parts and parts[0] in anchor_segments:
-                parts.pop(0)
+        key = segments[0]
+        remaining_parts = segments[1:]
 
-            # Use Path.resolve() to collapse any relative pathlinks '../'
-            full_path = anchor.joinpath(*parts).resolve()
+        if key not in self._anchors:
+            raise PermissionError(
+                f"Unauthorized: Key '{key}' is not a registered anchor. "
+                f"Available: {self.list_anchors()}"
+            )
 
-            # GUARD: Ensure path doesn't collapse above or out of anchor
-            try:
-                full_path.relative_to(anchor)
-                return full_path
-            except:
-                raise PermissionError(f"PATH TRAVERSAL! {full_path}")
-            
-            # full_path
+        anchor = self._anchors[key]
 
-        # Strict Enforcement!
-        # Not in anchors is illegal operation
-        raise PermissionError(
-            f"Unauthorized access: Path prefix '{key}' is NOT a registered anchor"
-            f"Authorized Anchors: {self.list_anchors()}"
-        )
+        # --- 4. Deduplication & Construction ---
+        # Handle the case where the user repeated the anchor name in the path
+        # e.g. 'data/data/logs' -> 'data/logs'
+        while remaining_parts and remaining_parts[0] in anchor.parts:
+            remaining_parts = remaining_parts[1:]
+
+        # Construct the final physical path
+        full_path = anchor.joinpath(*remaining_parts).resolve()
+
+        # --- 5. Security Guard (The Sandbox) ---
+        # Ensure the final path hasn't escaped the anchor via '../../'
+        try:
+            full_path.relative_to(anchor)
+        except (ValueError, RuntimeError):
+            raise PermissionError(f"PATH TRAVERSAL BLOCKED: {full_path} escapes {anchor}")
+
+        return full_path
 
     # --- Helper Methods ---
     def has_anchor(self, key: str) -> bool:

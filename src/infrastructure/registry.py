@@ -5,9 +5,6 @@ from dataclasses import dataclass
 from typing import Type, Optional
 # Dependencies
 from src.app import DataStream, BasePolicy
-#from .streams.local import LocalFileStream
-#from .streams.http import RemoteHttpStream
-#from .streams.db_table import DbTableStream
 
 @dataclass(frozen=True)
 class ProtocolRegistration:
