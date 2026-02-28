@@ -1,0 +1,1 @@
+# src/app/use_cases/manager.py

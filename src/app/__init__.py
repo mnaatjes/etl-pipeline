@@ -1,35 +1,30 @@
-# /src/app/__init__.py
+# src/app/__init__.py
 
-from . import ports
-from . import jobs
-from . import middleware  # This is the directory of implementations
+"""
+src/
+└── app/
+    ├── domain/               <-- THE CORE (The "What")
+    │   ├── models/           # Nouns: Dataclasses, Enums (e.g., Environment, Record)
+    │   ├── exceptions.py     # Domain-specific errors (e.g., ProcessingError)
+    │   └── services/         # Pure logic that doesn't fit in a single model
+    │
+    ├── ports/                <-- THE BOUNDARY (The "How")
+    │   ├── input/            # Interfaces for those calling the app (e.g., IManager)
+    │   └── output/           # Interfaces for tools the app uses (e.g., IDataStream, IRepository)
+    │
+    ├── use_cases/            <-- THE ORCHESTRATION (The "Why")
+    │   ├── jobs/             # Specific ETL flows (e.g., base.py, sync_job.py)
+    │   └── manager.py        # The coordinator/facade
+    │
+    ├── bootstrap.py          # Dependency Injection: Wiring Adapters to Ports
+    └── __init__.py           # Facade functions (e.g., bootstrap_pipeline())
+    
+└── infrastructure/           <-- THE ADAPTERS (The "Tools")
+    ├── adapters/
+    │   ├── streams/          # Concrete implementations (e.g., HttpAdapter, DbAdapter)
+    │   ├── persistence/      # DB specific logic (SQLAlchemy, Motor, etc.)
+    │   └── telemetry/        # External logging/metrics (Prometheus, CloudWatch)
+    ├── config/               # Reading Linux Env/YAML into AppConfig models
+    └── entrypoints/          # The "Drivers": CLI, Web Server, Cron Job
+"""
 
-# --- Expose Ports (Abstracts) ---
-from .ports.datastream import DataStream
-from .ports.decorator import Decorator
-from .ports.policy import BasePolicy
-from .jobs.base import Linear # FIX: Add the dot before pipelines
-from .ports.config import AppConfig
-from .ports.settings import StreamContract
-
-# Base Middleware Ports
-from .ports.middleware import (
-    BaseMiddleware,
-    ByteMiddleware,
-    ObjectMiddleware
-)
-
-__all__ = [
-    # --- Major Packages ---
-    "ports",
-    "jobs",
-    "middleware",
-    # --- Configuration and Settings ---
-    "StreamContract",
-    "AppConfig",
-    # --- Major Ports ---
-    "DataStream",
-    "BasePolicy",
-    "Linear",
-    "Decorator"
-]

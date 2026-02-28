@@ -1,4 +1,5 @@
 # src/app/ports/settings.py
+#COPIED
 from abc import ABC
 from dataclasses import dataclass
 

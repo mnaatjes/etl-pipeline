@@ -1,4 +1,5 @@
 # src/app/ports/envelope.py
+#COPIED
 from uuid import uuid4
 from enum import Enum, StrEnum
 from dataclasses import dataclass, field
