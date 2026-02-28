@@ -1,12 +1,15 @@
 # src/app/ports/output/datastream.py
 from dataclasses import fields
 from abc import ABC, abstractmethod
-from typing import Type, Iterator, Optional
+from typing import Type, Iterator, Optional, TypeVar, Generic
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.stream_contract import StreamContract
 from src.app.domain.models.envelope import Envelope
 
-class DataStream(ABC):
+# Create a TypeVar that represents any subclass of StreamContract
+T = TypeVar("T", bound=StreamContract)
+
+class DataStream(ABC, Generic[T]):
     def __init__(
             self, 
             uri:str,
@@ -18,19 +21,21 @@ class DataStream(ABC):
         The standard constructor for all DataStreams.
         :param as_sink: Whether the stream is intended for writing (True) or reading (False).
         """
+        # Initialize Open Property
+        self.is_open = False
+
         # Assign Common Properties
         self._uri = uri
-        self._policy = policy
         self._as_sink = as_sink
-        self._settings = settings
+        self._policy = policy
 
         # 1. Filter: Prevent 'Unexpected Keyword' crashes from Global Config
-        valid_fields = {f.name for f in fields(self.settings_contract)}
+        valid_fields = {f.name for f in fields(self._settings_contract)}
         filtered = {k: v for k, v in settings.items() if k in valid_fields}
 
         # 2. Hydrate: Triggers __init__ AND the base __post_init__ type-check
         try:
-            self.contract = self.settings_contract(**filtered)
+            self._settings: T = self._settings_contract(**filtered)
         except (TypeError, ValueError) as e:
             raise ValueError(f"Stream Initialization Failed: {e}")
 
@@ -38,7 +43,7 @@ class DataStream(ABC):
 
     @property
     @abstractmethod
-    def settings_contract(self) -> Type[StreamContract]:
+    def _settings_contract(self) -> Type[T]:
         """Mandatory Hook for Adapters."""
         pass
 
@@ -48,7 +53,7 @@ class DataStream(ABC):
     @property
     def chunk_size(self) -> int:
         """Example: A platform-wide setting accessed via the bag."""
-        return self._settings.get("chunk_size", 1024)
+        return getattr(self._settings, "chunk_size", 1024)
 
     # --- ABSTRACT METHODS ---
 
@@ -85,7 +90,9 @@ class DataStream(ABC):
 
     def __enter__(self):
         self.open()
+        self.is_open = True
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        self.is_open = False
         self.close()

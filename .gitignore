@@ -37,3 +37,6 @@ data/
 # Specific project files
 *.env
 .env.*
+
+# Refactoring
+__src/
