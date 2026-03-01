@@ -14,3 +14,11 @@ class StreamPolicy(ABC):
         required by an adapter (e.g., Path, DSN, or API Header).
         """
         pass
+    
+    @abstractmethod
+    def validate_access(self, resolved_config: Any) -> bool:
+        """
+        Pre-flight check. Does the resolved path exist? 
+        Is the API key in the environment?
+        """
+        pass
