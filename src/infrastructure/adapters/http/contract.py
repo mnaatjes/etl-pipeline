@@ -9,7 +9,6 @@ class HttpContract(StreamContract):
     """Settings for HTTP/HTTPS adapter"""
     # Required Props
     chunk_size:int=1024
-    use_lines:bool=False
     # HTTP Props
     read_mode:HttpReadMode = HttpReadMode.BYTES
     method:str="GET"

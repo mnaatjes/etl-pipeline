@@ -1,7 +1,7 @@
 # src/infrastructure/adapters/http/adapter.py
 import httpx
 from typing import Type, ContextManager, Optional, Iterator
-from app.ports.output.stream_policy import StreamPolicy
+from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.datastream import DataStream
 from src.app.domain.models.envelope import Envelope, RegimeType, Completeness
 from src.infrastructure.adapters.http.contract import HttpContract, HttpReadMode
@@ -158,8 +158,14 @@ class HttpStream(DataStream[HttpContract]):
         
         # Append Content based on Http Method
         if self._settings.method in payload_methods and self._settings.request_body:
-            # Inject Intruction set / request body
-            request_kwargs["content"] = self._settings.request_body
+            # Explicit for httpx
+            body = self._settings.request_body
+            # Let httpx handle JSON encoding
+            if isinstance(body, (dict,list)):
+                request_kwargs["json"] = body
+            else:                    
+                # Inject Intruction set / request body as plain text / bytes
+                request_kwargs["content"] = self._settings.request_body
 
         
         # 3. ENTER-STREAM: Use http method and append request properties
