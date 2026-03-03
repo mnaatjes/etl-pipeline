@@ -43,6 +43,7 @@ class StreamManager:
         # 2. DISCOVER: Get the 'Blueprint' (Adapter<DataStream>Cls, StreamPolicy)
         blueprint = self._registry.get_registration(protocol)
 
+        # TODO: Catalog Check
         # 3. RESOLVE: Use Policy, resolve logical_uri to technical_uri
         # e.g. 'mock://data' --> '/opt/data/file_name.csv'
         # Set final_uri and check for policy to resolve if present
@@ -63,3 +64,18 @@ class StreamManager:
             policy=blueprint.policy,
             **settings
         )
+    
+    def read(self, uri:str) -> DataStream|Any:
+        pass
+
+    def write(self, uri:str) -> Any:
+        pass
+
+    def exists(self, uri:str) -> bool:
+        return False
+
+    def resolve(self, uri:str) -> Any:
+        pass
+
+    def validate_resource(self, uri:str) -> Any:
+        pass
