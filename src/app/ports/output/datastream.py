@@ -79,11 +79,16 @@ class DataStream(ABC, Generic[T]):
     @abstractmethod
     def close(self): pass
     
+    @classmethod
     @abstractmethod
-    def exists(self) -> bool:
+    def exists(cls, location: StreamLocation) -> bool:
         """
-        Check physical/external availability.
-        Returns True if the resource can be reached/accessed.
+        PRE-FLIGHT CHECK (Class Method):
+        Determines if the resource exists at the given resolved location 
+        without instantiating the stream machinery.
+        
+        Args:
+            location (StreamLocation): A PhysicalPath or PhysicalURI.
         """
         pass
 

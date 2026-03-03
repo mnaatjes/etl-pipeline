@@ -95,17 +95,62 @@ class StreamManager:
             
         raise TypeError(f"Unsupported StreamLocation type: {type(location)}")
     
-    def read(self, uri:str) -> DataStream|Any:
-        pass
+    # --- Action Methods ---
 
-    def write(self, uri:str) -> Any:
-        pass
+    def read(self, uri: str) -> Any:
+        """
+        Convenience method to open a stream, read its entire contents, and close it.
+        Perfect for small config files or JSON payloads.
+        """
+        with self.get_stream(uri, as_sink=False) as stream:
+            return stream.read()
 
-    def exists(self, uri:str) -> bool:
-        return False
+    def write(self, uri: str, data: Any) -> None:
+        """
+        Convenience method to open a stream for writing, commit data, and close it.
+        """
+        with self.get_stream(uri, as_sink=True) as stream:
+            stream.write(data)
 
-    def resolve(self, uri:str) -> Any:
-        pass
+    def exists(self, uri: str) -> bool:
+        """
+        Checks if the resource exists without opening a full stream.
+        Delegates the 'exists' check to the protocol-specific Adapter.
+        """
+        # We still need to classify the URI to find the right blueprint
+        location = self._factory.build(uri)
+        protocol = self._get_protocol_for_location(location)
+        blueprint = self._registry.get_registration(protocol)
 
-    def validate_resource(self, uri:str) -> Any:
-        pass
+        # Adapters should implement a static or class method for 'exists' 
+        # to avoid instantiating the whole stream object.
+        return blueprint.adapter_cls.exists(location)
+
+    # --- Discovery & Validation Methods ---
+
+    def resolve(self, uri: str) -> StreamLocation:
+        """
+        Exposes the resolution logic. 
+        Returns the PhysicalPath or PhysicalURI without opening a stream.
+        Useful for debugging or pre-checking paths.
+        """
+        return self._factory.build(uri)
+
+    def validate_resource(self, uri: str) -> bool:
+        """
+        Performs a 'Dry Run' of the entire resolution and policy check.
+        Returns True if the URI is well-formed, registered, and passes 
+        security boundaries.
+        """
+        try:
+            location = self.resolve(uri)
+            protocol = self._get_protocol_for_location(location)
+            blueprint = self._registry.get_registration(protocol)
+            
+            if blueprint.policy:
+                blueprint.policy.validate_access(location)
+            return True
+        except (ValueError, KeyError, PermissionError, TypeError):
+            # In a High-Resolution architecture, we catch specific domain 
+            # errors to indicate a 'False' validation state.
+            return False

@@ -3,7 +3,7 @@ import httpx
 from typing import Type, ContextManager, Optional, Iterator
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.datastream import DataStream
-from src.app.domain.models.resource_identity import RemoteURL
+from src.app.domain.models.resource_identity import RemoteURL, StreamLocation, PhysicalURI
 from src.app.domain.models.envelope import Envelope, RegimeType, Completeness
 from src.infrastructure.adapters.http.contract import HttpContract, HttpReadMode
 
@@ -95,51 +95,30 @@ class HttpStream(DataStream[HttpContract]):
                 headers=self._settings.headers
             )
     
-    def exists(self, persist:bool=False) -> bool:
+    @classmethod
+    def exists(cls, location: StreamLocation) -> bool:
         """
-        Verifies resource availability via a HEAD request.
+        Atomic Existence Check.
         
-        :param persist: If True, initializes the long-lived self._client. 
-                        If False (Default), uses a temporary client that 
-                        is destroyed immediately to prevent socket leakage.
+        Logic:
+        1. Ensure the location is a PhysicalURI (Network coordinate).
+        2. Open a temporary httpx.Client.
+        3. Perform a HEAD request.
+        4. Auto-close the client via context manager (Safety first).
         """
-        # 1. Check for existing self._client
-        # - Client already open
-        # - No need to close it
-        if self._client:
-            try:
-                # Return is_success bool value
-                return self._client.head(
-                    self._url,
-                    timeout=self._settings.timeout
-                ).is_success
-            except httpx.RequestError:
-                # Return failure
-                return False
-        
-        # 2. Lazy Managed: Persistent (True)
-        if persist:
-            self.open()
-            if self._client is None:
-                raise ValueError(f"Client unable to open() in exists()! self._client == None")
-            try:
-                # Return is_success bool value
-                return self._client.head(
-                    self._url,
-                    timeout=self._settings.timeout
-                ).is_success
-            except httpx.RequestError:
-                # Return failure
-                return False
-        
-        # 3. Safe-by-default: Atomic / persist == False
-        # - Does NOT assign value to self._client
-        # - Opens and Closes atomic httpx.Client
+        # 1. Type Guard: We only handle Network URIs here
+        if not isinstance(location, PhysicalURI):
+            return False
+
+        # 2. Atomic Execution: Open, Check, and Burn
+        # No 'persist' logic, no shared state—just a clean, isolated probe.
         try:
-            with httpx.Client(verify=self._settings.verify_ssl) as temp_client:
-                response = temp_client.head(self._url, timeout=self._settings.timeout)
+            # We cast location to str because httpx expects a string/URL
+            with httpx.Client(timeout=5.0) as client:
+                response = client.head(str(location))
                 return response.is_success
-        except httpx.RequestError:
+        except (httpx.RequestError, httpx.HTTPStatusError):
+            # Any networking failure or 4xx/5xx error returns False
             return False
 
     def read(self) -> Iterator[Envelope]:

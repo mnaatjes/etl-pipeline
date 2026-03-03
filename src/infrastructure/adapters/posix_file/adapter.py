@@ -5,7 +5,7 @@ from typing import Type, Iterator, Optional, IO
 from pathlib import Path
 from src.app.ports.output.datastream import DataStream
 from src.app.domain.models.envelope import Envelope
-from src.app.domain.models.resource_identity import PhysicalPath
+from src.app.domain.models.resource_identity import PhysicalPath, StreamLocation
 from src.infrastructure.adapters.posix_file.contract import PosixFileContract
 from src.infrastructure.adapters.posix_file.policy import PosixFilePolicy
 from src.infrastructure.adapters.posix_file.enums import FileReadMode
@@ -40,9 +40,23 @@ class PosixFileStream(DataStream[PosixFileContract]):
     def _settings_contract(self) -> Type[PosixFileContract]:
         return PosixFileContract
 
-    def exists(self) -> bool:
-        """Standard POSIX check via pathlib."""
-        return self._path.exists()
+    @classmethod
+    def exists(cls, location: StreamLocation) -> bool:
+        """
+        High-Resolution Existence Check.
+        
+        Uses the Class-level expert logic to verify the physical coordinate 
+        before the stream machinery is even initialized.
+        """
+        # 1. Type Guard: Ensure we aren't trying to check a URL with a File Scout
+        if not isinstance(location, PhysicalPath):
+            # If the factory somehow handed an S3/HTTP URI to the Posix adapter,
+            # we return False as this adapter cannot verify that medium.
+            return False
+
+        # 2. Execution: PhysicalPath inherits from pathlib.Path
+        # No need for manual 'os.path.exists'—the type handles its own reality.
+        return location.exists()
     
     def open(self) -> None:
         """
