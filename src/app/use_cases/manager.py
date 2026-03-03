@@ -2,6 +2,7 @@
 
 from typing import Any, Dict, Optional
 from src.app.registry.streams import StreamRegistry
+from src.app.domain.models.types import StreamLocation
 from src.app.ports.output.datastream import DataStream
 from src.app.domain.models.app_config import AppConfig
 from src.app.domain.services.settings_resolver import SettingsResolver
@@ -44,6 +45,8 @@ class StreamManager:
         blueprint = self._registry.get_registration(protocol)
 
         # TODO: Catalog Check
+        # TODO: StreamLocation Enforcement
+        
         # 3. RESOLVE: Use Policy, resolve logical_uri to technical_uri
         # e.g. 'mock://data' --> '/opt/data/file_name.csv'
         # Set final_uri and check for policy to resolve if present
