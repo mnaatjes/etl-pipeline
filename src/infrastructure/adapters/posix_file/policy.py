@@ -12,11 +12,23 @@ class PosixFilePolicy(StreamPolicy):
     """
     def derive_dir_permissions(self, file_perms:int) -> int:
         """
-        Helper for the Adapter: 
-        Ensures that if a file is Read/Write (0o664), the directory 
-        is Read/Write/Execute (0o775).
+        Calculates directory permissions based on file permissions.
+        Ensures 'Execute' bits are set so the OS can traverse the path.
+        
+        Logic: For every 'Read' bit (4), add an 'Execute' bit (1).
+        Example: 0o664 (rw-rw-r--) -> 0o775 (rwxrwxr-x)
         """
-        return file_perms | 0o111
+        # Start with the base file permissions
+        dir_perms = file_perms
+
+        # If User can read, User must execute
+        if file_perms & 0o400: dir_perms |= 0o100
+        # If Group can read, Group must execute
+        if file_perms & 0o040: dir_perms |= 0o010
+        # If Others can read, Others must execute
+        if file_perms & 0o004: dir_perms |= 0o001
+
+        return dir_perms
     
     def validate_access(self, resolved_config: Path) -> bool:
         """

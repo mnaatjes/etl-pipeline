@@ -3,6 +3,7 @@ import httpx
 from typing import Type, ContextManager, Optional, Iterator
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.datastream import DataStream
+from src.app.domain.models.types import RemoteURL
 from src.app.domain.models.envelope import Envelope, RegimeType, Completeness
 from src.infrastructure.adapters.http.contract import HttpContract, HttpReadMode
 
@@ -38,7 +39,7 @@ class HttpStream(DataStream[HttpContract]):
         ...         return HttpContract
     """
     def __init__(
-            self, uri: str, 
+            self, uri: RemoteURL, 
             as_sink: bool|None = False, 
             policy: StreamPolicy|None = None, 
             **settings
@@ -46,12 +47,23 @@ class HttpStream(DataStream[HttpContract]):
         """Pass parameters to DataStream Base Class
         - Validates 'as_sink' not valid
         - Settings filtering and hydration
-        - Defines self._uri, self._as_sink, self._policy, self._settings
+        - Defines self._url, self._as_sink, self._policy, self._settings
         """
         if as_sink:
             raise NotImplementedError("HTTP Sink not supported.")
+        
         # DataStream parameters
         super().__init__(uri, as_sink, policy, **settings)
+
+        # 0. RUNTIME INTEGRITY GUARD (The NewType workaround)
+        # We verify it's a string and contains a network scheme.
+        if not isinstance(uri, str) or "://" not in uri:
+            raise TypeError(
+                f"HttpStream integrity violation. Expected RemoteURL (string), "
+                f"but received {type(uri)}. Did you provide a ValidatedPath by mistake?"
+            )
+        # Cast as str from RemoteURL
+        self._url: str = str(uri)
 
         # 1. THE CONNECTION POOL (The Engine)
         # Represents the underlying TCP/HTTP session. 
@@ -98,7 +110,7 @@ class HttpStream(DataStream[HttpContract]):
             try:
                 # Return is_success bool value
                 return self._client.head(
-                    self._uri,
+                    self._url,
                     timeout=self._settings.timeout
                 ).is_success
             except httpx.RequestError:
@@ -113,7 +125,7 @@ class HttpStream(DataStream[HttpContract]):
             try:
                 # Return is_success bool value
                 return self._client.head(
-                    self._uri,
+                    self._url,
                     timeout=self._settings.timeout
                 ).is_success
             except httpx.RequestError:
@@ -125,7 +137,7 @@ class HttpStream(DataStream[HttpContract]):
         # - Opens and Closes atomic httpx.Client
         try:
             with httpx.Client(verify=self._settings.verify_ssl) as temp_client:
-                response = temp_client.head(self._uri, timeout=self._settings.timeout)
+                response = temp_client.head(self._url, timeout=self._settings.timeout)
                 return response.is_success
         except httpx.RequestError:
             return False
@@ -149,7 +161,7 @@ class HttpStream(DataStream[HttpContract]):
         # - Ensure method, url, params correct
         request_kwargs = {
             "method": self._settings.method,
-            "url": self._uri,
+            "url": self._url,
             "params": self._settings.params
         }
 
@@ -241,7 +253,7 @@ class HttpStream(DataStream[HttpContract]):
                     payload=chunk,
                     regime=RegimeType.BYTES,
                     completeness=Completeness.PARTIAL,
-                    metadata={"mode": "bytes", "uri": self._uri}
+                    metadata={"mode": "bytes", "uri": self._url}
                 )
 
     def _read_lines(self) -> Iterator[Envelope]:

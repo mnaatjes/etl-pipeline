@@ -5,6 +5,7 @@ from typing import Type, Iterator, Optional, TypeVar, Generic
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.stream_contract import StreamContract
 from src.app.domain.models.envelope import Envelope
+from src.app.domain.models.types import StreamLocation
 
 # Create a TypeVar that represents any subclass of StreamContract
 T = TypeVar("T", bound=StreamContract)
@@ -12,7 +13,7 @@ T = TypeVar("T", bound=StreamContract)
 class DataStream(ABC, Generic[T]):
     def __init__(
             self, 
-            uri:str,
+            uri:StreamLocation,
             as_sink:Optional[bool] = False,
             policy:Optional[StreamPolicy] = None,
             **settings

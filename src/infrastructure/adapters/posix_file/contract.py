@@ -12,7 +12,7 @@ class PosixFileContract(StreamContract):
     Ensures absolute alignment between Python logic and Linux kernel expectations.
     """
     # --- Parent Properties ---
-    chunk_size:int
+    chunk_size:int = 1024
     use_lines:bool = False
     # --- File Properties ---
     read_mode: FileReadMode = FileReadMode.BYTES

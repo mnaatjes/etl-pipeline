@@ -1,5 +1,5 @@
 # src/app/domain/models/types.py
-from typing import NewType
+from typing import NewType, Union
 from pathlib import Path
 
 """
@@ -18,11 +18,14 @@ ResourceKey:
 """
 ResourceKey = NewType("ResourceKey", str)
 
-"""
-ValidatedPath:
-- A Trusted Object
-- Represents a path that has been proven and is_safe
-"""
-# 3. A path that has PASSED through a Sandbox/Boundary
-# The Adapter ONLY accepts this type.
+# 3. REMOTE: A validated external location (HTTP, S3, FTP)
+# We use str as the base, but the name 'RemoteURL' provides semantic intent.
+RemoteURL = NewType("RemoteURL", str)
+
+# 4. LOCAL: A path that has PASSED through a Sandbox/Boundary.
+# The Adapter ONLY accepts this type for POSIX operations.
 ValidatedPath = NewType("ValidatedPath", Path)
+
+# 5. THE UNION: The universal type for the DataStream Port.
+# This is what the parent DataStream class will now expect.
+StreamLocation = Union[RemoteURL, ValidatedPath]
