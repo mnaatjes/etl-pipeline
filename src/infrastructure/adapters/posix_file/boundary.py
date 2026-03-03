@@ -2,7 +2,7 @@
 
 from pathlib import Path
 from src.app.ports.input.resource_boundary import ResourceBoundary
-from src.app.domain.models.types import LogicalURI, ValidatedPath
+from src.app.domain.models.resource_identity import LogicalURI
 
 class PosixResourceBoundary(ResourceBoundary[Path]):
     def resolve(self, uri: LogicalURI, anchor: Path) -> Path:
