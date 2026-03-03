@@ -1,72 +1,99 @@
-# src/app/use_cases/manager.py
-
 from typing import Any, Dict, Optional
-from src.app.registry.streams import StreamRegistry
-from src.app.domain.models.types import StreamLocation
-from src.app.ports.output.datastream import DataStream
+
+# Domain Imports
+from src.app.domain.models.resource_identity import StreamLocation, PhysicalPath, PhysicalURI
 from src.app.domain.models.app_config import AppConfig
+
+# Service/Port Imports
+from src.app.domain.services.resource_factory import ResourceFactory
+from src.app.domain.services.resource_catalog import ResourceCatalog
 from src.app.domain.services.settings_resolver import SettingsResolver
+from src.app.ports.output.datastream import DataStream
+from src.app.registry.streams import StreamRegistry
 
 class StreamManager:
-    def __init__(self, registry:StreamRegistry, app_config:AppConfig, resolver:SettingsResolver) -> None:
+    """
+    The Orchestrator of the DataStream lifecycle.
+    
+    SRP: Handles the transition from a raw URI string to a fully-instantiated 
+    Infrastructure Adapter. It uses the ResourceFactory to normalize identity 
+    and the SettingsResolver to calculate the final configuration.
+    """
+    def __init__(
+        self, 
+        registry: StreamRegistry, 
+        factory: ResourceFactory, 
+        catalog: ResourceCatalog,
+        app_config: AppConfig, 
+        resolver: SettingsResolver
+    ) -> None:
         """
-        - SRP: Orchestrates lifecycle of a stream
-        - Resolves the 'Blueprint'
-        - Does NOT do:
-            > read/write
-            > know about protocols
-            > validate properties of Contracts
-
-        :param registry: The catalog of known protocols and their blueprints.
-        :param app_config: Tier 1 (Global) settings baseline.
-        :param resolver: The 'Waterfall Engine' that calculates the final settings bag.
+        :param registry: Catalog of blueprints (Adapter Classes and Policies).
+        :param factory: Classifier that promotes strings to StreamLocations.
+        :param catalog: Librarian that provides protocol metadata for internal keys.
+        :param app_config: Global settings (Tier 1).
+        :param resolver: The Waterfall Engine for settings resolution.
         """
         self._registry = registry
+        self._factory = factory
+        self._catalog = catalog
         self._app_config = app_config
         self._resolver = resolver
 
     def get_stream(
-            self,
-            uri:str,
-            as_sink:bool=False,
-            **overrides
+        self,
+        uri: str,
+        as_sink: bool = False,
+        **overrides
     ) -> DataStream:
         """
-        Main entry point to obtain a validated, ready-to-use DataStream.
-        
-        :param uri: The logical URI (e.g., 's3://bucket/file.json').
-        :param as_sink: Whether the stream is for writing (True) or reading (False).
-        :param overrides: Tier 3 (Local) settings provided at the call-site.
+        Main entry point to obtain a ready-to-use DataStream.
         """
-        # 1. IDENTIFY: Determine the protocol
-        protocol = uri.split("://")[0]
+        # 1. CLASSIFY & RESOLVE: Promote the raw string to a high-res Location
+        # This handles either Catalog resolution (Internal) or Direct wrapping (External)
+        location: StreamLocation = self._factory.build(uri)
 
-        # 2. DISCOVER: Get the 'Blueprint' (Adapter<DataStream>Cls, StreamPolicy)
+        # 2. IDENTIFY: Determine the protocol required to find the blueprint
+        # We ask the location object itself or the catalog for the protocol
+        protocol = self._get_protocol_for_location(location)
+
+        # 3. DISCOVER: Get the 'Blueprint' for this protocol
         blueprint = self._registry.get_registration(protocol)
 
-        # TODO: Catalog Check
-        # TODO: StreamLocation Enforcement
-        
-        # 3. RESOLVE: Use Policy, resolve logical_uri to technical_uri
-        # e.g. 'mock://data' --> '/opt/data/file_name.csv'
-        # Set final_uri and check for policy to resolve if present
-        final_uri = uri
+        # 4. POLICY CHECK: If a blueprint has a secondary resolution/validation policy
+        # This acts as a final 'Contextual Guard' before instantiation.
         if blueprint.policy:
-            # Policy present --> resolve()
-            final_uri = blueprint.policy.resolve(uri)
-            # Validate prior to stream instantiation
-            blueprint.policy.validate_access(final_uri)
+            # We pass the high-res location object to the policy
+            blueprint.policy.validate_access(location)
         
-        # 4. CALCULATE: Run SettingsResolver Waterfall
+        # 5. CALCULATE: Run the Settings Waterfall (Global -> Local Overrides)
         settings = self._resolver.resolve(self._app_config, overrides)
 
-        # 5. INSTANTIATE: Return DataStream instance
+        # 6. INSTANTIATE: Hire the Worker (Adapter) and hand it the Badge (Location)
         return blueprint.adapter_cls(
-            uri=final_uri,
+            uri=location,
             as_sink=as_sink,
             policy=blueprint.policy,
             **settings
         )
+
+    # --- Private Helpers ---
+
+    def _get_protocol_for_location(self, location: StreamLocation) -> str:
+        """
+        Extracts the protocol from the location object.
+        - PhysicalPath: Asks the Catalog what protocol is mapped to the key.
+        - PhysicalURI: Asks the URI what its scheme is (e.g., 'https').
+        """
+        if isinstance(location, PhysicalPath):
+            # Internal resources need their protocol looked up by key
+            return self._catalog.get_protocol(location.key)
+        
+        if isinstance(location, PhysicalURI):
+            # External resources carry their protocol in the scheme
+            return location.protocol
+            
+        raise TypeError(f"Unsupported StreamLocation type: {type(location)}")
     
     def read(self, uri:str) -> DataStream|Any:
         pass

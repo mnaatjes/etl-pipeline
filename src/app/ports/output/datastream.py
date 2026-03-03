@@ -5,7 +5,7 @@ from typing import Type, Iterator, Optional, TypeVar, Generic
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.stream_contract import StreamContract
 from src.app.domain.models.envelope import Envelope
-from src.app.domain.models.types import StreamLocation
+from src.app.domain.models.resource_identity import StreamLocation
 
 # Create a TypeVar that represents any subclass of StreamContract
 T = TypeVar("T", bound=StreamContract)

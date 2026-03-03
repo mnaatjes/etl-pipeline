@@ -1,57 +1,72 @@
 # src/app/ports/input/resource_boundary.py
-
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
-from src.app.domain.models.types import LogicalURI, ValidatedPath
 
-# T is the "Physical" result (e.g. Path() for files, DSN for Databases)
+# Updated Imports: Utilizing the high-fidelity identity suite
+from src.app.domain.models.resource_identity import LogicalURI, PhysicalPath
+
+# T represents the "Anchor Type" (the root cage).
+# For POSIX, T is pathlib.Path. For HTTP, T is often a str.
 T = TypeVar("T")
 
 class ResourceBoundary(ABC, Generic[T]):
     """
-    Abstract Input Port for Resource Security
-    - Ensures logical requests cannot 'escape' boundaries
-    - Aids in uri resolution
+    Abstract Input Port for Resource Security and Boundary Enforcement.
+    
+    Responsibilities:
+    - Acts as the 'Chroot-lite' for the domain, preventing directory traversal.
+    - Bridges the gap between a 'LogicalURI' (Intent) and 'PhysicalPath' (Reality).
+    - Enforces the 'Security Cage' (Anchor) for every governed resource.
+    
+    Hexagonal Role:
+    This is an Input Port (Primary Port). It defines the contract that 
+    infrastructure-specific guards (like PosixResourceBoundary) must fulfill.
     """
+
     @abstractmethod
-    def resolve(self, uri:LogicalURI, anchor:T) -> T:
+    def resolve(self, uri: LogicalURI, anchor: T) -> PhysicalPath:
         """
-        Translates a logical string-based URI into a concrete physical resource.
-        - Strips logical prefixes (e.g., registry://)
-        - Joins the sub-path to the anchor
-        - Performs normalization (resolving '..' or '.' segments)
+        Translates a logical identity into a concrete, secured PhysicalPath.
+
+        Internal Logic Steps for Implementations:
+        1. Parse the sub-path from the LogicalURI (path_remainder).
+        2. Combine the sub-path with the physical anchor (T).
+        3. Normalize the resulting path (stripping '..' and symbols).
+        4. Validate safety via `is_safe()` before returning.
 
         Args:
-            uri (LogicalURI): The raw, untrusted logical string provided 
-                by the user or configuration (e.g., "registry://scans/01.xml").
-            anchor (T): The physical 'root' or 'home' directory that acts as 
-                the cage for this specific resource key (e.g., Path("/srv/data")).
+            uri (LogicalURI): The smart Value Object representing a 'registry://' 
+                identity (e.g., registry://scans/01.xml).
+            anchor (T): The physical 'home' or 'root' coordinate that serves as 
+                the boundary (e.g., Path("/srv/data/scans")).
 
         Returns:
-            T: The resolved physical resource (e.g., a pathlib.Path object).
+            PhysicalPath: A fully-realized, secured physical path object 
+                branded with its identity metadata.
         
         Raises:
-            PermissionError: If the resolved path attempts to escape the anchor.
-            ValueError: If the URI format is malformed or invalid for this boundary.
+            PermissionError: If the resolved path attempts to escape the anchor 
+                (e.g., via '../' traversal).
+            ValueError: If the URI sub-path format is invalid for this boundary.
         """
         pass
 
     @abstractmethod
-    def is_safe(self, physical_resource:T, anchor:T) -> bool:
+    def is_safe(self, physical_resource: PhysicalPath, anchor: T) -> bool:
         """
-        Performs the final validation check to ensure boundary containment.
+        The final integrity check for boundary containment.
 
-        - Compares the resolved physical resource against the anchor to ensure no 'escape' has occurred
-        - Ensures symbolic links, path traversal, or logic errors cannot occur
+        - Compares the resolved resource against the anchor.
+        - Verifies that the resource is 'under' the anchor in the hierarchy.
+        - Mitigates symbolic link attacks or 'breakout' attempts.
 
         Args:
-            physical_resource (T): The concrete resource to validate 
-                (e.g., Path("/srv/data/scans/file.xml")).
-            anchor (T): The authorized root container 
-                (e.g., Path("/srv/data")).
+            physical_resource (PhysicalPath): The concrete path produced during 
+                resolution (e.g., /srv/data/scans/file.xml).
+            anchor (T): The authorized root container (e.g., /srv/data/scans).
 
         Returns:
-            bool: True if the resource is strictly contained within or equal 
-                to the anchor; False if it resides outside the boundary.
+            bool: True if the resource is strictly contained within the anchor's 
+                namespace; False otherwise.
         """
         pass
