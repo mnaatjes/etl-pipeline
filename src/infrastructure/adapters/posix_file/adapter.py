@@ -5,7 +5,7 @@ from typing import Type, Iterator, Optional, IO
 from pathlib import Path
 from src.app.ports.output.datastream import DataStream
 from src.app.domain.models.envelope import Envelope
-from src.app.domain.models.types import ValidatedPath
+from src.app.domain.models.resource_identity import PhysicalPath
 from src.infrastructure.adapters.posix_file.contract import PosixFileContract
 from src.infrastructure.adapters.posix_file.policy import PosixFilePolicy
 from src.infrastructure.adapters.posix_file.enums import FileReadMode
@@ -15,15 +15,15 @@ class PosixFileStream(DataStream[PosixFileContract]):
     Adapter for POSIX - Linux - file I/O
 
     """
-    def __init__(self, uri:ValidatedPath, policy:PosixFilePolicy, as_sink: bool|None = False, **settings) -> None:
+    def __init__(self, uri:PhysicalPath, policy:PosixFilePolicy, as_sink: bool|None = False, **settings) -> None:
         """Parent DataStream Parameter Pass"""
         super().__init__(uri, as_sink, policy, **settings)
-        # ValidatedPath type for Resource Boundary Catalog / Path() object
+        # PhysicalPath type for Resource Boundary Catalog / Path() object
         # REAL Type Check: Ensures we aren't dealing with a string
         if not isinstance(uri, Path):
             # We provide a detailed error so the developer knows they missed the Catalog step
             raise TypeError(
-                f"PosixFileStream integrity violation. Expected Path (ValidatedPath), "
+                f"PosixFileStream integrity violation. Expected Path (PhysicalPath), "
                 f"but received {type(uri)}. Did you forget to call resource_catalog.resolve_uri()?"
             )
         self._path: Path = uri

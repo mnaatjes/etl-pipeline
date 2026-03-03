@@ -3,7 +3,7 @@ import httpx
 from typing import Type, ContextManager, Optional, Iterator
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.datastream import DataStream
-from src.app.domain.models.types import RemoteURL
+from src.app.domain.models.resource_identity import RemoteURL
 from src.app.domain.models.envelope import Envelope, RegimeType, Completeness
 from src.infrastructure.adapters.http.contract import HttpContract, HttpReadMode
 
