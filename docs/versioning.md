@@ -57,22 +57,66 @@ Used to ensure the version string is updated across multiple files (README, pypr
 
 ---
 
-## 4. Configuration (pyproject.toml)
+## 4. Single Source of Truth (SSoT)
 
-Our `pyproject.toml` should be configured to support these tools:
+The definitive location for the version number is **`src/__init__.py`**. 
+- **Code:** Access via `import src; print(src.__version__)`.
+- **Packaging:** `pyproject.toml` is configured to pull the version dynamically from this file.
+- **Automation:** The `.bumpversion.cfg` file acts as the **Workflow Governor**, keeping all files in sync.
+
+---
+
+## 5. Automation with `bumpversion`
+
+We use `.bumpversion.cfg` to automate the propagation of the version string across the codebase.
+
+### The `.bumpversion.cfg` Configuration
+This file tracks:
+1. **The Current Version:** (e.g., `1.1.0`)
+2. **Commit/Tagging:** Whether to automatically commit changes and create a Git tag.
+3. **Target Files:** Which files to update (e.g., `src/__init__.py`, `README.md`, `src/app/__init__.py`).
+
+### The Versioning Workflow (What you actually do)
+
+When you are ready to update the version, you **do not** manually edit any files. Instead, follow these steps:
+
+1.  **Select Change Type:** Decide if your change is a `major`, `minor`, or `patch`.
+2.  **Execute the Command:** Run the command in your terminal:
+    ```bash
+    bumpversion <part>  # where <part> is major, minor, or patch
+    ```
+3.  **Automatic Synchronization:** The tool will:
+    - Update `current_version` in `.bumpversion.cfg`.
+    - Update `__version__` in `src/__init__.py` and `src/app/__init__.py`.
+    - Update the version badge in `README.md`.
+    - Stage the changes, commit them with a version message, and create a Git tag (e.g., `v1.2.0`).
+
+### Maintenance of `.bumpversion.cfg`
+- **When adding new files:** If you create a new file that needs to display the version number, add a new `[bumpversion:file:path/to/file]` block to `.bumpversion.cfg`.
+- **When changing README format:** If you change the style of the version badge in the `README.md`, update the `search` and `replace` patterns in the config file.
+
+---
+
+## 6. Configuration (pyproject.toml)
+
+Our `pyproject.toml` is configured to use **Hatch** as the build backend, which pulls the version from the SSoT:
 
 ```toml
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
 [project]
 name = "streamflow-framework"
-version = "1.1.0" # Managed by bumpversion or hatch
+dynamic = ["version"]
 
 [tool.hatch.version]
-path = "src/app/__init__.py" # SSoT for the code
+path = "src/__init__.py"
 ```
 
 ---
 
-## 5. Summary: How to Push an Update
+## 6. Summary: How to Push an Update
 
 1. **Finalize Code:** Ensure `feat/middleware` is clean.
 2. **Merge:** Merge into `main`.

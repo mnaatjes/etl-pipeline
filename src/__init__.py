@@ -9,4 +9,4 @@ Y	Minor	New Features: When you add functionality in a backwards-compatible manne
 Z	Patch	Bug Fixes: For backwards-compatible bug fixes or internal refactoring that doesn't change behavior.
 """
 
-__version__ = "1.0.0"
+__version__ = "1.1.0"

@@ -6,3 +6,4 @@ psutil
 requests
 httpx
 respx
+bump2version
