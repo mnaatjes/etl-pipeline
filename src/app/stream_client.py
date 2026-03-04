@@ -18,23 +18,23 @@ class StreamClient:
         # The 'Big Bang': Manager, Registry, and Resolver are wired here.
         self._manager = Bootstrap.initialize(config_overrides=config)
 
-    def get_stream(
+    def get_handle(
         self, 
         uri: str, 
         as_sink: bool = False, 
         **settings
     ) -> Any:
         """
-        Requests a validated Stream instance from the Orchestrator.
+        Requests a Smart Handle from the Orchestrator.
         """
-        return self._manager.get_stream(uri, as_sink=as_sink, **settings)
+        return self._manager.get_handle(uri, as_sink=as_sink, **settings)
 
     def read(self, uri: str) -> Any:
-        """Convenience: Read entire stream contents."""
+        """Convenience: Read entire stream contents as Packets."""
         return self._manager.read(uri)
 
     def write(self, uri: str, data: Any) -> None:
-        """Convenience: Write data to a stream."""
+        """Convenience: Write data to a stream via a Packet."""
         self._manager.write(uri, data)
 
     def exists(self, uri: str) -> bool:

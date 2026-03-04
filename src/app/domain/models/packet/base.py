@@ -2,7 +2,11 @@
 from dataclasses import dataclass, field, replace
 from typing import Any, Iterator, Optional, cast, Dict
 
-from src.app.domain.models.packet import FlowSignal, PayloadSubject, Identity, Completeness, StreamContext, PayloadType
+from src.app.domain.models.packet.flow import FlowSignal
+from src.app.domain.models.packet.payload import PayloadSubject, PayloadType
+from src.app.domain.models.packet.identity import Identity
+from src.app.domain.models.packet.completeness import Completeness
+from src.app.domain.models.streams.stream_context import StreamContext
 
 @dataclass(frozen=True)
 class Packet:

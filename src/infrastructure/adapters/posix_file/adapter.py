@@ -116,7 +116,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
     def read(self) -> Iterator[Packet]:
         """
         Dispatches reading based on the Contract strategy.
-        Yields Envelopes to the StreamManager.
+        Yields Packets to the StreamManager.
         """
         if not self._file_handle or self._file_handle.closed:
             raise IOError("Attempted to read from a closed stream.")
@@ -155,7 +155,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
 
     def write(self, packet: Packet) -> None:
         """
-        Writes the envelope payload to disk.
+        Writes the packet payload to disk.
         Forces permission sync (os.chmod) on every write to ensure Linux compliance.
         """
         if not self._file_handle or self._file_handle.closed:

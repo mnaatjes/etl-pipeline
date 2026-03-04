@@ -77,7 +77,7 @@ class DataStream(ABC, Generic[T]):
     
     @abstractmethod
     def read(self) -> Iterator[Packet]:
-        """Implementation must yield an Envelope object(s)"""
+        """Implementation must yield Packet object(s)"""
         yield from []
 
     def write(self, packet:Packet) -> None:

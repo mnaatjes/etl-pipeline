@@ -17,8 +17,8 @@ class StreamHandle:
         # Define Props
         self._adapter   = adapter   # Worker
         self.capacity   = capacity  # Introspector
-        self.context    = context   # Passworp
-        self.uri        = adapter._uri
+        self.context    = context   # Passport
+        self.uri        = adapter.uri
 
     # --- PROPERTIES ---
 
@@ -31,6 +31,30 @@ class StreamHandle:
 
     def read(self) -> Iterator[Packet]:
         """
-        Packet Factory: Deligates Reading to the Adapter
-        - Ensures output is wrapped in Self-Aware Packets
+        Delegates reading to the Adapter.
+        The Adapter already yields Self-Aware Packets stamped with Context.
         """
+        if not self.is_open:
+            raise IOError(f"Attempted to read from a closed stream: {self.uri}")
+        
+        yield from self._adapter.read()
+
+    def write(self, payload: Any) -> None:
+        """
+        Guards writing with the capacity check.
+        Wraps raw payload in a Packet before passing to adapter.
+        """
+        if not self.capacity.is_writable:
+            raise PermissionError(f"Stream is read-only: {self.uri}")
+        
+        packet = Packet(payload=payload, context=self.context)
+        self._adapter.write(packet)
+
+    # --- CONTEXT MANAGER ---
+
+    def __enter__(self) -> 'StreamHandle':
+        self._adapter.open()
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self._adapter.close()
