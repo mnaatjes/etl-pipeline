@@ -15,27 +15,34 @@ class PosixFileStream(DataStream[PosixFileContract]):
     Adapter for POSIX - Linux - file I/O
 
     """
-    def __init__(self, uri:PhysicalPath, policy:PosixFilePolicy, as_sink: bool|None = False, **settings) -> None:
+    def __init__(self, uri: StreamLocation, policy: PosixFilePolicy, as_sink: bool | None = False, **settings) -> None:
         """Parent DataStream Parameter Pass"""
+        from src.app.domain.models.resource_identity import PhysicalURI
+
         # If writing, default to 'wb' if no mode provided
         if as_sink and "file_mode" not in settings:
             settings["file_mode"] = "wb"
-            
-        super().__init__(uri, as_sink, policy, **settings)
-        # PhysicalPath type for Resource Boundary Catalog / Path() object
-        # REAL Type Check: Ensures we aren't dealing with a string
-        if not isinstance(uri, Path):
-            # We provide a detailed error so the developer knows they missed the Catalog step
+
+        # 1. Coordinate Conversion (PhysicalURI -> Path)
+        if isinstance(uri, PhysicalURI):
+            if uri.protocol != "file":
+                raise TypeError(f"PosixFileStream cannot handle non-file URI: {uri.protocol}")
+            # Extract path from file:///...
+            self._path = Path(uri.split("://")[1])
+        elif isinstance(uri, Path):
+            self._path = uri
+        else:
             raise TypeError(
-                f"PosixFileStream integrity violation. Expected Path (PhysicalPath), "
-                f"but received {type(uri)}. Did you forget to call resource_catalog.resolve_uri()?"
+                f"PosixFileStream integrity violation. Expected Path or PhysicalURI, "
+                f"but received {type(uri)}."
             )
-        self._path: Path = uri
+
+        super().__init__(uri, as_sink, policy, **settings)
 
         # Physical Connection between Python and Linux Filesystem
         # - Stores io.TextIOWrapper or io.BufferedRandom object
         self._file_handle: Optional[IO] = None
-        
+
         # 2. Re-assert the type for the specific child class
         # This resolves the "Unknown Attribute" error in the methods below.
         self._policy: PosixFilePolicy = policy or PosixFilePolicy()

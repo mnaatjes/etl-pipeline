@@ -30,22 +30,33 @@ class PosixFilePolicy(StreamPolicy):
 
         return dir_perms
     
-    def validate_access(self, resolved_config: Path) -> bool:
+    def validate_access(self, resolved_config: Any) -> bool:
         """
         Performs the 'Pre-flight' check.
         Ensures the parent directory is at least accessible for traversal.
         """
-        # List Prohibited Directories
-        prohibited = ["/etc", "/root", "/boot", "/proc", "/sys"]
-        path_str = str(resolved_config)
+        from src.app.domain.models.resource_identity import PhysicalURI
 
-        # Perform check against prohibited directories
+        # 1. Promote to Path object
+        if isinstance(resolved_config, PhysicalURI):
+            if resolved_config.protocol != "file":
+                # Only 'file' is safe to promote to a local path
+                return False
+            path_obj = Path(resolved_config.split("://")[1])
+        else:
+            path_obj = Path(resolved_config)
+
+        # 2. List Prohibited Directories
+        prohibited = ["/etc", "/root", "/boot", "/proc", "/sys"]
+        path_str = str(path_obj)
+
+        # 3. Perform check against prohibited directories
         if any(path_str.startswith(root) for root in prohibited):
             return False
         
-        # Traversal Check
+        # 4. Traversal Check
         # - Check ability to write to parent
-        parent_dir = resolved_config.parent
+        parent_dir = path_obj.parent
         if parent_dir.exists():
             return os.access(parent_dir, os.X_OK)
         

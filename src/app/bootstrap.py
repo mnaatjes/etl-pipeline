@@ -11,6 +11,7 @@ from src.app.use_cases.manager import StreamManager
 from src.infrastructure.adapters.posix_file.adapter import PosixFileStream
 from src.infrastructure.adapters.posix_file.boundary import PosixResourceBoundary
 from src.infrastructure.adapters.posix_file.policy import PosixFilePolicy
+from src.infrastructure.adapters.http.adapter import HttpStream
 
 class Bootstrap:
     """
@@ -45,6 +46,18 @@ class Bootstrap:
             protocol="file",
             adapter_cls=PosixFileStream,
             policy=posix_policy
+        )
+
+        # HTTP Protocols
+        registry.register(
+            protocol="http",
+            adapter_cls=HttpStream,
+            policy=None
+        )
+        registry.register(
+            protocol="https",
+            adapter_cls=HttpStream,
+            policy=None
         )
         
         # 3. RESOURCE SERVICES: The High-Resolution Identity Stack

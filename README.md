@@ -140,7 +140,8 @@ Pass keyword arguments to `get_stream`, `read`, or `write` to override settings 
 | Protocol | Adapter | Description |
 | :--- | :--- | :--- |
 | `posix` | `PosixFileStream` | Local Linux/POSIX file system access with boundary security. |
-| `http` | `HttpStream` | (Planned) External HTTP/HTTPS resource access. |
+| `file` | `PosixFileStream` | Direct local file access (mapped to POSIX adapter). |
+| `http` | `HttpStream` | External HTTP/HTTPS resource access using `httpx`. |
 
 ## URI Schemes
 - **Internal (`registry://[key]/path`)**: Resolved via the `ResourceCatalog` using pre-configured anchors.
