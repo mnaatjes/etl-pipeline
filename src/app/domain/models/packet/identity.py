@@ -1,27 +1,37 @@
-# src/app/domain/models/identity.py
-from uuid import uuid4
+# src/app/domain/models/packet/identity.py
+import uuid
 from dataclasses import dataclass, field
 from typing import Optional
 
 @dataclass(frozen=True)
 class Identity:
-    """Lineage and trace for every unit of work"""
-    id:str = field(default_factory=lambda: str(uuid4())[:12]) # Commit Hash
-    stream_id:str = field(default_factory=lambda: str(uuid4())[:12]) # Persistend Hash for whole stream
-    parent_id: Optional[str] = None # Parent Commit
+    """
+    The 'Who' - Lineage and Traceability for every unit of work.
+    
+    Manages the parent-child relationship of packets as they move through 
+    the transformation pipeline.
+    """
+    id: str = field(default_factory=lambda: str(uuid.uuid4())[:12])
+    correlation_id: str = field(default_factory=lambda: str(uuid.uuid4())[:12])
+    parent_id: Optional[str] = None
 
     @classmethod
-    def start(cls) -> 'Identity':
-        """Creates the root-identity for the stream and packet"""
-        root_id = str(uuid4())[:12]
-        return cls(
-            id=root_id,
-            stream_id=root_id
-        )
-    
+    def start_chain(cls) -> 'Identity':
+        """
+        Initializes a root identity.
+        Both ID and Correlation ID are identical at the start of the chain.
+        """
+        root_id = str(uuid.uuid4())[:12]
+        return cls(id=root_id, correlation_id=root_id)
+
     def spawn(self) -> 'Identity':
-        """Creates a new UUID for derivative and preserves stream_id"""
+        """
+        Creates a derivative identity.
+        - Preserves Correlation ID (the lineage anchor).
+        - Sets parent_id to the current ID.
+        - Generates a new unique ID for the new unit.
+        """
         return Identity(
-            stream_id=self.stream_id,
+            correlation_id=self.correlation_id,
             parent_id=self.id
         )

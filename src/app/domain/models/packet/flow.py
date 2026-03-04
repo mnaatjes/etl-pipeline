@@ -1,9 +1,13 @@
-# src/app/domain/models/flow.py
+# src/app/domain/models/packet/flow.py
 from enum import StrEnum
 
 class FlowSignal(StrEnum):
-    """Signalman for Packet Lifecycle"""
-    ATOMIC = "ATOMIC"       # Single, complete unit - no buffering
-    STREAM_START = "START"  # Init engine/buffer
-    STREAM_DATA = "DATA"    # Chunk
-    STREAMEND = "END"       # Flush
+    """
+    Signalman for the Packet Lifecycle.
+    
+    Coordinates how the Pipeline Orchestrator and Middleware handle buffering.
+    """
+    ATOMIC = "ATOMIC"       # A single, complete unit. No buffering required.
+    STREAM_START = "START"  # The first packet; triggers engine/buffer initialization.
+    STREAM_DATA = "DATA"    # Intermediate chunk; triggers accumulation/processing.
+    STREAM_END = "END"      # The "Flush" signal; triggers buffer emptying.
