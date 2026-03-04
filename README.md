@@ -1,3 +1,7 @@
+# StreamFlow Framework
+
+![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
+
 ## Design Philosophy
 
 StreamFlow is built on the principles of **Clean Architecture** and **Domain-Driven Design (DDD)**. Key architectural decisions include:
