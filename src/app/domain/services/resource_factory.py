@@ -2,9 +2,11 @@ from src.app.domain.models.resource_identity import (
     StreamLocation, 
     LogicalURI, 
     PhysicalURI,
-    PhysicalPath
+    PhysicalPath,
+    ResourceKey
 )
 from src.app.domain.services.resource_catalog import ResourceCatalog
+from src.app.registry.streams import StreamRegistry
 
 class ResourceFactory:
     """
@@ -13,11 +15,13 @@ class ResourceFactory:
     and determines the final StreamLocation (PhysicalPath or PhysicalURI).
     """
     
-    def __init__(self, catalog: ResourceCatalog) -> None:
+    def __init__(self, catalog: ResourceCatalog, registry:StreamRegistry) -> None:
         """
         :param catalog: The Librarian responsible for resolving logical identities.
+        :param registry: Stream Adapter Registry
         """
         self._catalog = catalog
+        self._registry = registry
 
     def build(self, uri: str) -> StreamLocation:
         """
@@ -29,23 +33,30 @@ class ResourceFactory:
             3. Firewall: Rejects unanchored/naked strings.
         """
         # 1. GOVERNED / INTERNAL (Identity-led)
-        # We check for the 'registry://' protocol to trigger the Librarian.
-        if uri.startswith("registry://"):
-            # Value Object handles initial structural validation.
-            logical = LogicalURI(uri) 
-            
-            # The Catalog returns a PhysicalPath (which satisfies StreamLocation).
-            return self._catalog.resolve_uri(logical)
-        
-        # 2. DIRECT / EXTERNAL (Coordinate-led)
-        # If it has a scheme but isn't registry, it's a raw coordinate (https, s3, file).
-        if "://" in uri:
-            # Returns a PhysicalURI (Direct-access coordinate).
-            return PhysicalURI(uri)
+        # Ensure protocol is present
+        if "://" not in uri:
+            raise ValueError(f"Security Violation: '{uri}' is not a qualified Resource Identifier!")
 
-        # 3. SECURITY FIREWALL (Naked path block)
-        # Prevents '/etc/passwd' or './relative/path' from bypassing the registry.
+        # Store incoming as candidate
+        logical_candidate = LogicalURI(uri)
+        scheme = logical_candidate.protocol
+        key = logical_candidate.key
+
+        # 1. IDENTITY CHECKS: Mandatory "://registry..." 
+        if scheme == "registry":
+            return self._catalog.resolve_uri(logical_candidate)
+        
+        # 2. DISCOVERY: Is the Catalog Aware of the protocol
+        if self._catalog.has_resource(scheme, key):
+            return self._catalog.resolve_uri(logical_candidate)
+
+        # 3. COORDINATE: Registry Discovered
+        if self._registry.is_supported(scheme):
+            return PhysicalURI(uri)
+        
+        # 4. SECURITY FIREWALL (Naked path block)
         raise ValueError(
             f"Security Violation: '{uri}' is not a qualified ResourceIdentifier. "
-            f"Use 'registry://[key]/path' for internal resources or a full URL for external ones."
+            f"Use 'registry://[key]/path' for internal resources or use "
+            f"'<protocol>://[key]/path' for registered resources"
         )

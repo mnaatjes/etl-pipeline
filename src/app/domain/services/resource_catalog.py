@@ -61,7 +61,16 @@ class ResourceCatalog:
             return resolved_path.bind_key(key)
 
         return resolved_path
+    
+
     # --- HELPER & METADATA METHODS ---
+
+    def has_resource(self, protocol:str, key:ResourceKey) -> bool:
+        """
+        Checks if a ResourceKey(str) is registered under a specific protocol
+        - Used by ResourceFactory for 'Smart' Catalog-Aware resolution
+        """
+        return self._key_protocols.get(key, None) == protocol
 
     def get_protocol(self, key: ResourceKey) -> str:
         """

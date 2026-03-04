@@ -25,3 +25,7 @@ class StreamRegistry:
         if protocol not in self._protocols:
             raise ValueError(f"No adapter registered for protocol: {protocol}")
         return self._protocols[protocol]
+    
+    def is_supported(self, protocol:str) -> bool:
+        """Helper to check if a protocol has a registered adapter"""
+        return protocol in self._protocols

@@ -41,6 +41,12 @@ class StreamClient:
         """Convenience: Check resource existence."""
         return self._manager.exists(uri)
 
+    def resolve(self, uri: str) -> Any:
+        """
+        Resolves a URI to its physical location (Path or URL).
+        """
+        return self._manager.resolve(uri)
+
     def add_resource(self, key: str, protocol: str, anchor: Any) -> None:
         """
         Registers a physical resource (e.g., a local directory or S3 bucket) 

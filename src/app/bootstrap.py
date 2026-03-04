@@ -71,7 +71,10 @@ class Bootstrap:
             boundary=PosixResourceBoundary()
         )
 
-        factory = ResourceFactory(catalog=catalog)
+        factory = ResourceFactory(
+            catalog=catalog,
+            registry=registry
+        )
 
         # 4. RESOLVER: The Waterfall Engine for settings merging
         resolver = SettingsResolver()
