@@ -1,6 +1,12 @@
-# StreamFlow Framework
+## Design Philosophy
 
-StreamFlow is a high-resolution DataStream orchestration framework designed for type-safe, governed, and secure resource access across multiple protocols.
+StreamFlow is built on the principles of **Clean Architecture** and **Domain-Driven Design (DDD)**. Key architectural decisions include:
+
+- **Hexagonal Architecture (Ports & Adapters):** Core logic is completely decoupled from infrastructure (filesystems, APIs). This allows for protocol-agnostic stream operations.
+- **High-Resolution Identity:** The framework doesn't treat resources as strings. It resolves them into **Smart Value Objects** that carry both physical coordinates and security metadata.
+- **Resource Boundaries:** Security is a first-class citizen. Every protocol must register a `Boundary` that acts as a domain-level firewall, preventing path traversal and unauthorized resource access.
+- **Composition Root:** Dependency injection is centralized in the `Bootstrap` layer, ensuring that all components are correctly wired and that the system remains 100% testable without reliance on complex mocking.
+- **The Waterfall Engine:** Configuration follows a strict priority hierarchy (Global -> Local Overrides), ensuring consistent defaults while allowing for granular runtime control.
 
 ## Directory Structure
 
