@@ -1,4 +1,4 @@
-__version__ = "1.2.1"
+__version__ = "1.2.2"
 from src.app.stream_client import StreamClient
 from src.app.bootstrap import Bootstrap
 

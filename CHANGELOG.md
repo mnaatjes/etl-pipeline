@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - Fixed bug in CHANGELOG with bumpversion
 
-## [1.2.1] - 2026-03-04
+## [## [Unreleased]] - 2026-03-04
 ### Changed
 - Refined the versioning workflow and documentation.
 - Removed outdated `__src/` directory.
