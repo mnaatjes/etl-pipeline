@@ -118,16 +118,11 @@ class StreamManager:
 
     def write(self, uri: str, data: Any) -> None:
         """
-        Convenience method to write data wrapped in a traceable Packet.
+        Convenience method to write data to a stream.
         """
         handle = self.get_handle(uri, as_sink=True)
         with handle as stream:
-            # We create a 'standalone' packet for the write operation
-            packet = Packet(
-                payload=data,
-                context=handle.context
-            )
-            stream.write(packet)
+            stream.write(data)
 
     def exists(self, uri: str) -> bool:
         """

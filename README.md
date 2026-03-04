@@ -4,13 +4,13 @@
 
 ## Design Philosophy
 
-StreamFlow is built on the principles of **Clean Architecture** and **Domain-Driven Design (DDD)**. Key architectural decisions include:
+StreamFlow is built on the principles of **Clean Architecture**, **Domain-Driven Design (DDD)**, and the **Smart Gateway** pattern. Key architectural decisions include:
 
 - **Hexagonal Architecture (Ports & Adapters):** Core logic is completely decoupled from infrastructure (filesystems, APIs). This allows for protocol-agnostic stream operations.
-- **High-Resolution Identity:** The framework doesn't treat resources as strings. It resolves them into **Smart Value Objects** that carry both physical coordinates and security metadata.
-- **Resource Boundaries:** Security is a first-class citizen. Every protocol must register a `Boundary` that acts as a domain-level firewall, preventing path traversal and unauthorized resource access.
-- **Composition Root:** Dependency injection is centralized in the `Bootstrap` layer, ensuring that all components are correctly wired and that the system remains 100% testable without reliance on complex mocking.
-- **The Waterfall Engine:** Configuration follows a strict priority hierarchy (Global -> Local Overrides), ensuring consistent defaults while allowing for granular runtime control.
+- **Smart Gateway Pattern:** The framework acts as an intelligent mediator. It doesn't just pass bytes; it negotiates **Capabilities**, injects **Context**, and enforces **Security Boundaries**.
+- **High-Resolution Identity:** Resources are resolved into **Smart Value Objects** that carry physical coordinates, lineage, and security metadata.
+- **Context-Aware Observability:** Every data unit (**Packet**) is stamped with a **StreamContext** (Passport) containing a unique `trace_id`, enabling end-to-end observability.
+- **Composition Root:** Dependency injection is centralized in the `Bootstrap` layer, ensuring the system is 100% testable without complex mocking.
 
 ## Directory Structure
 
@@ -18,7 +18,10 @@ StreamFlow is built on the principles of **Clean Architecture** and **Domain-Dri
 src/
 ├── app/                        # The Composition Root & Facade
 │   ├── domain/                 # Core Domain Models & Services
-│   │   ├── models/             # Value Objects (Envelope, AppConfig, Identity)
+│   │   ├── models/             
+│   │   │   ├── packet/         # The Self-Aware Unit of Work (Packet, FlowSignal)
+│   │   │   ├── streams/        # Smart Resource Models (Handle, Capacity, Context)
+│   │   │   └── resource_identity/ # Identity Objects (LogicalURI, PhysicalPath)
 │   │   └── services/           # Logic (Catalog, Factory, Resolver)
 │   ├── ports/                  # Interfaces (Input/Output Boundaries)
 │   ├── registry/               # Adapter Blueprints
@@ -26,9 +29,7 @@ src/
 │   ├── bootstrap.py            # Dependency Injection & Wiring
 │   └── stream_client.py        # Public Facade
 └── infrastructure/             # Concrete Implementations
-    └── adapters/               # Protocol Adapters
-        ├── posix_file/         # Local File System (POSIX)
-        └── http/               # External Web Resources (HTTP)
+    └── adapters/               # Protocol Adapters (POSIX, HTTP)
 ```
 
 ## Getting Started
@@ -45,104 +46,83 @@ from src.app import StreamClient
 # 1. Initialize the client
 client = StreamClient()
 
-# 2. Check if a resource exists
-if client.exists("registry://data/input.txt"):
-    # 3. Read content (returns an iterator of Envelopes)
-    stream_data = client.read("registry://data/input.txt")
-    for envelope in stream_data:
-        print(envelope.payload)
+# 2. Request a Smart Handle (The dashboard for your resource)
+handle = client.get_handle("posix://data/input.txt", read_mode="lines")
 
-# 4. Write content
-client.write("registry://logs/app.log", "Operation successful")
+# 3. Use Introspection (Ask what is possible)
+if handle.capacity.can_seek:
+    print("This stream supports random access!")
+
+# 4. Read Self-Aware Packets
+with handle as stream:
+    for packet in stream.read():
+        print(f"[{packet.context.trace_id}] Payload: {packet.payload}")
+
+# 5. Write content
+client.write("posix://logs/app.log", b"Operation successful")
 ```
 
 ## Core Methods
 
-### `get_stream(uri, as_sink=False, **overrides)`
-Returns a `DataStream` instance for fine-grained control.
-```python
-with client.get_stream("registry://data/input.txt", chunk_size=2048) as stream:
-    for envelope in stream.read():
-        process(envelope.payload)
-```
+### `get_handle(uri, as_sink=False, **overrides)`
+Returns a `StreamHandle` instance. This is the **Smart Gateway** entry point.
+- Provides access to `capacity` (introspection).
+- Manages stream lifecycle via context manager.
+- Yields traceable `Packet` objects.
 
 ### `read(uri)`
-Convenience method to read all content from a URI. Returns an iterator of `Envelope` objects.
+Convenience method to read all content from a URI. Returns an iterator of `Packet` objects.
 
 ### `write(uri, data)`
-Convenience method to write data to a URI. Automatically wraps data in a domain `Envelope`.
+Convenience method to write data to a URI. Automatically wraps data in a traceable `Packet`.
 
 ### `exists(uri)`
 Checks if a resource exists at the given URI without opening a stream.
 
+### `resolve(uri)`
+Exposes the internal resolution logic, returning the physical `Path` or `URL`.
+
 ## Resource Access Modes
 
-StreamFlow supports two ways to access data, balancing security/portability with developer speed.
-
-### 1. Governed Access (The `registry://` Scheme)
-This is the **High-Resolution** approach. You map a physical root to a logical "Key" (Anchor) using the `add_resource()` method.
-
-- **Security:** Access is restricted by a `ResourceBoundary`. Users cannot use `../` to escape the anchor.
-- **Portability:** You can change the physical path (or even move from Local Disk to S3) without changing a single line of application code.
+### 1. Catalog-Aware Access (`posix://`, `s3://`, etc.)
+The framework is **Polite**. If you register a key in the catalog, you can access it using its protocol scheme directly.
 
 **Registration:**
 ```python
-client = StreamClient()
-
-# Register a local directory as 'vault'
-client.add_resource(
-    key="vault", 
-    protocol="posix", 
-    anchor="/var/lib/pipeline/data"
-)
+client.add_resource(key="vault", protocol="posix", anchor="/var/lib/data")
 ```
 
-**Usage:**
+**Intuitive Usage:**
 ```python
-# Resolved to: /var/lib/pipeline/data/reports/2026.csv
-client.read("registry://vault/reports/2026.csv")
+# Automatically resolves to /var/lib/data/reports/2026.csv
+client.read("posix://vault/reports/2026.csv")
 ```
 
-### 2. Direct Access (The `file://` or `http://` Schemes)
-This is the **Standard** approach. You provide the full physical coordinate.
-
-- **Speed:** No registration required.
-- **Trade-off:** No security boundaries; hardcoded paths make the code less portable across environments (e.g., Linux vs. Windows, Local vs. Cloud).
-
-**Usage:**
+### 2. Mandatory Identity (`registry://`)
+Standard internal resolution. Always safe, always governed by boundaries.
 ```python
-client.read("file:///tmp/debug_log.txt")
+client.read("registry://vault/config.json")
 ```
+
+### 3. Direct Access (`file://`, `https://`)
+Direct physical access bypassing the catalog. Subject to the **Protocol Safelist** firewall.
 
 ---
 
-## Configuration & Properties
+## Observability & Introspection
 
-### Global Settings (Tier 1)
-Pass a dictionary to the `StreamClient` constructor to override global defaults.
-- `env`: `DEV`, `PROD`, `TEST`
-- `log_level`: `INFO`, `NONE`
-- `chunk_size`: Default buffer size (integer)
-- `enable_telemetry`: Boolean
+### StreamContext (The Passport)
+Every stream generates a unique `trace_id`. Every `Packet` produced by that stream carries this context, allowing you to trace a single piece of data through multiple middleware processors.
 
-```python
-client = StreamClient(config={"chunk_size": 4096, "env": "PROD"})
-```
-
-### Stream-Specific Overrides (Tier 3)
-Pass keyword arguments to `get_stream`, `read`, or `write` to override settings for a specific operation.
-- `file_mode`: e.g., `"rb"`, `"wb"`, `"a"`
-- `encoding`: e.g., `"utf-8"`, `"ascii"`
-- `permissions`: Octal file permissions (e.g., `0o644`)
+### StreamCapacity (The Dashboard)
+Adapters declare their capabilities upfront:
+- `can_seek`: Can the stream move to an offset?
+- `is_writable`: Does the resource support writing?
+- `is_network`: Is this a remote resource?
 
 ## Supported Adapters
 
-| Protocol | Adapter | Description |
+| Protocol | Adapter | Capabilities |
 | :--- | :--- | :--- |
-| `posix` | `PosixFileStream` | Local Linux/POSIX file system access with boundary security. |
-| `file` | `PosixFileStream` | Direct local file access (mapped to POSIX adapter). |
-| `http` | `HttpStream` | External HTTP/HTTPS resource access using `httpx`. |
-
-## URI Schemes
-- **Internal (`registry://[key]/path`)**: Resolved via the `ResourceCatalog` using pre-configured anchors.
-- **External (`[protocol]://[path]`)**: Direct access using standard protocols (e.g., `https://example.com/data.json`).
+| `posix` / `file` | `PosixFileStream` | Seekable, Writable, Local |
+| `http` / `https` | `HttpStream` | Sequential, Read-Only, Network |

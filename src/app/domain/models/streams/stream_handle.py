@@ -1,9 +1,11 @@
 # src/app/domain/models/streams/stream_handle.py
-from typing import Iterator
+from typing import Iterator, Any, TYPE_CHECKING
 from src.app.domain.models.streams.stream_capacity import StreamCapacity
 from src.app.domain.models.streams.stream_context import StreamContext
 from src.app.domain.models.packet.base import Packet
-from src.app.ports.output.datastream import DataStream
+
+if TYPE_CHECKING:
+    from src.app.ports.output.datastream import DataStream
 
 class StreamHandle:
     """
@@ -13,7 +15,7 @@ class StreamHandle:
     - Packet Factory
 
     """
-    def __init__(self, adapter:DataStream, capacity:StreamCapacity, context:StreamContext) -> None:
+    def __init__(self, adapter:'DataStream', capacity:StreamCapacity, context:StreamContext) -> None:
         # Define Props
         self._adapter   = adapter   # Worker
         self.capacity   = capacity  # Introspector

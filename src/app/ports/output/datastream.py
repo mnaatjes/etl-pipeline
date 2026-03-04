@@ -4,7 +4,8 @@ from abc import ABC, abstractmethod
 from typing import Type, Iterator, Optional, TypeVar, Generic
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.stream_contract import StreamContract
-from src.app.domain.models.streams import StreamContext, StreamCapacity
+from src.app.domain.models.streams.stream_context import StreamContext
+from src.app.domain.models.streams.stream_capacity import StreamCapacity
 from src.app.domain.models.packet import Packet
 
 from src.app.domain.models.resource_identity import StreamLocation
