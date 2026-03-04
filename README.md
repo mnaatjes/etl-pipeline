@@ -1,6 +1,6 @@
 # StreamFlow Framework
 
-![Version](https://img.shields.io/badge/version-1.2.2-blue.svg)
+![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 
 ## Design Philosophy
 

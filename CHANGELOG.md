@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
-## [1.2.2] - 2026-03-04
+## [## [Unreleased]] - 2026-03-04
 ### Added
 - **Smart Gateway Pattern**: Evolved the framework from a proxy to an intelligent resource mediator.
 - **Self-Aware Packets**: Replaced the legacy `Envelope` system with a high-resolution `Packet` model.
