@@ -12,7 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Corrected bumpversion `CHANGELOG` behavior
 - Deleted feat/middleware branch after merge
 
-## [1.2.0] - 2026-03-04
+## [## [Unreleased]] - 2026-03-04
 
 ### Added
 - **Catalog-Aware Resolution**: The `ResourceFactory` now intelligently resolves URIs based on registered catalog anchors.
