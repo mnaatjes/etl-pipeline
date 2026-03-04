@@ -1,11 +1,8 @@
 # src/app/domain/models/packet/packet.py
 from dataclasses import dataclass, field, replace
-from typing import Any, Iterator, Optional, cast
+from typing import Any, Iterator, Optional, cast, Dict
 
-from src.app.domain.models.packet.flow import FlowSignal
-from src.app.domain.models.packet.payload import PayloadType, Subject
-from src.app.domain.models.packet.identity import Identity
-from src.app.domain.models.packet.context import PipelineContext
+from src.app.domain.models.packet import FlowSignal, PayloadSubject, Identity, Completeness, StreamContext, PayloadType
 
 @dataclass(frozen=True)
 class Packet:
@@ -15,24 +12,17 @@ class Packet:
     Composes payload, type, signal, context, and identity into a 
     single, immutable, lifecycle-aware unit of work.
     """
-    # The 'What'
+    # 1. CORE PROPERTIES
     payload: Any
-    type: PayloadType = Subject.BYTES
-    
-    # The 'When'
-    signal: FlowSignal = FlowSignal.ATOMIC
-    
-    # The 'Where/Why' (The Passport)
-    # We use Optional hint for the dataclass default, but cast it in methods
-    context: Optional[PipelineContext] = None # type: ignore
-    
-    # The 'Who' (Lineage)
-    identity: Identity = field(default_factory=Identity.start_chain)
+    context: StreamContext
 
-    def __post_init__(self):
-        """Ensure every Packet has a context upon creation."""
-        if self.context is None:
-            raise ValueError("Packet must be initialized with a PipelineContext.")
+    # 2. LABELS
+    subject: PayloadType = PayloadSubject.BYTES
+    signal: FlowSignal = FlowSignal.ATOMIC
+    completeness: Completeness = Completeness.COMPLETE
+
+    metadata: Dict[str,Any] = field(default_factory=dict)
+    identity: Identity = field(default_factory=Identity.start_chain)
 
     # --- LIFECYCLE METHODS ---
 
@@ -46,7 +36,13 @@ class Packet:
 
     # --- DERIVATION METHODS (The 'Smart' Logic) ---
 
-    def spawn(self, payload: Any, type: Optional[PayloadType] = None, signal: Optional[FlowSignal] = None) -> 'Packet':
+    def spawn(
+            self, 
+            payload: Any, 
+            subject: Optional[PayloadType] = None, 
+            signal: Optional[FlowSignal] = None,
+            completeness: Optional[Completeness] = None
+    ) -> 'Packet':
         """
         Creates a new Packet derived from the current one.
         - Preserves the Context (The Passport)
@@ -54,22 +50,25 @@ class Packet:
         """
         return Packet(
             payload=payload,
-            type=type or self.type,
+            subject=subject or self.subject,
             signal=signal or self.signal,
-            context=cast(PipelineContext, self.context).clone(),
+            completeness=completeness or self.completeness,
+            context=self.context,
             identity=self.identity.spawn()
         )
-
-    def drop(self) -> Iterator['Packet']:
-        """Syntactic sugar for 'Swallowing' a packet (terminating this branch)."""
-        return iter([])
 
     # --- PROXY METHODS (Direct access to Context) ---
 
     def commit(self, **metadata) -> 'Packet':
         """Proxy to update the underlying context metadata."""
-        return replace(self, context=cast(PipelineContext, self.context).commit(**metadata))
+        new_metadata = self.metadata.copy()
+        new_metadata.update(metadata)
+        return replace(self, metadata=new_metadata)
 
     def rebase(self, new_uri: str) -> 'Packet':
         """Proxy to update the current physical location in the context."""
-        return replace(self, context=cast(PipelineContext, self.context).rebase(new_uri))
+        return replace(self, context=self.context.rebase(new_uri))
+
+    def drop(self) -> Iterator['Packet']:
+        """Syntactic sugar for 'Swallowing' a packet (terminating this branch)."""
+        return iter([])

@@ -3,7 +3,7 @@ from typing import NewType
 
 PayloadType = NewType("PayloadType", str)
 
-class Subject:
+class PayloadSubject:
     """
     The 'What' - Shared Vocabulary for Pipeline Packets.
     

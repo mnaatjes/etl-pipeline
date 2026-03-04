@@ -3,7 +3,7 @@ from dataclasses import dataclass, field, replace
 from typing import Any, Dict, List
 
 @dataclass(frozen=True)
-class PipelineContext:
+class StreamContext:
     """
     The 'Where/Why' - Structured metadata and origin tracking.
     
@@ -16,11 +16,11 @@ class PipelineContext:
     history: List[str] = field(default_factory=list)
     metadata: Dict[str, Any] = field(default_factory=dict)
 
-    def clone(self) -> 'PipelineContext':
+    def clone(self) -> 'StreamContext':
         """Creates an explicit 1:1 copy of the context."""
         return replace(self)
 
-    def commit(self, **updates) -> 'PipelineContext':
+    def commit(self, **updates) -> 'StreamContext':
         """
         Updates metadata and returns a new Context instance.
         """
@@ -28,7 +28,7 @@ class PipelineContext:
         new_meta.update(updates)
         return replace(self, metadata=new_meta)
 
-    def rebase(self, new_uri: str) -> 'PipelineContext':
+    def rebase(self, new_uri: str) -> 'StreamContext':
         """
         Updates the current URI and adds the previous location to history.
         """

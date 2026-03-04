@@ -4,7 +4,9 @@ from abc import ABC, abstractmethod
 from typing import Type, Iterator, Optional, TypeVar, Generic
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.stream_contract import StreamContract
-from src.app.domain.models.envelope import Envelope
+from src.app.domain.models.streams import StreamContext, StreamCapacity
+from src.app.domain.models.packet import Packet
+
 from src.app.domain.models.resource_identity import StreamLocation
 
 # Create a TypeVar that represents any subclass of StreamContract
@@ -14,6 +16,7 @@ class DataStream(ABC, Generic[T]):
     def __init__(
             self, 
             uri:StreamLocation,
+            context:StreamContext,
             as_sink:Optional[bool] = False,
             policy:Optional[StreamPolicy] = None,
             **settings
@@ -26,9 +29,10 @@ class DataStream(ABC, Generic[T]):
         self.is_open = False
 
         # Assign Common Properties
-        self._uri = uri
-        self._as_sink = as_sink
-        self._policy = policy
+        self._uri       = uri
+        self._as_sink   = as_sink
+        self._context   = context
+        self._policy    = policy
 
         # 1. Filter: Prevent 'Unexpected Keyword' crashes from Global Config
         valid_fields = {f.name for f in fields(self._settings_contract)}
@@ -44,12 +48,22 @@ class DataStream(ABC, Generic[T]):
 
     @property
     @abstractmethod
+    def capacity(self) -> StreamCapacity:
+        """Mandatory: Adapters must declare capabilities"""
+        pass
+
+    @property
+    @abstractmethod
     def _settings_contract(self) -> Type[T]:
         """Mandatory Hook for Adapters."""
         pass
 
 
     # --- CONCRETE PROPERTIES ---
+
+    @property
+    def uri(self) -> StreamLocation:
+        return self._uri
 
     @property
     def chunk_size(self) -> int:
@@ -62,11 +76,11 @@ class DataStream(ABC, Generic[T]):
     def open(self) -> None: pass
     
     @abstractmethod
-    def read(self) -> Iterator[Envelope]:
+    def read(self) -> Iterator[Packet]:
         """Implementation must yield an Envelope object(s)"""
         yield from []
 
-    def write(self, envelope:Envelope) -> None:
+    def write(self, packet:Packet) -> None:
         """
         Default implementation. 
         We don't use @abstractmethod so that Read-Only adapters 

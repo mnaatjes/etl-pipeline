@@ -4,82 +4,66 @@ from typing import Type, ContextManager, Optional, Iterator
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.datastream import DataStream
 from src.app.domain.models.resource_identity import RemoteURL, StreamLocation, PhysicalURI
-from src.app.domain.models.envelope import Envelope, RegimeType, Completeness
+from src.app.domain.models.streams import StreamCapacity, StreamContext
+from src.app.domain.models.packet import Packet, FlowSignal, PayloadSubject, Completeness
 from src.infrastructure.adapters.http.contract import HttpContract, HttpReadMode
 
 class HttpStream(DataStream[HttpContract]):
     """
     Modern HTTP/HTTPS Adapter using httpx.
     Specialized for high-performance streaming and strict type safety.
-    Refactored 03/01/2026
-
-    This class utilizes Python Generics (typing.Generic[T]) to 'lock in' a specific 
-    StreamContract at the subclass level. 
-
-    Behavior:
-        1. Type Placeholder: In the base `DataStream`, `T` acts as a structural 
-        placeholder bound to the `StreamContract` base class.
-        2. Static Specialization: By declaring `class HttpStream(DataStream[HttpContract])`, 
-        the subclass replaces the generic `T` with a concrete `HttpContract`.
-        3. IDE Intelligence: This specialization allows static analysis tools (like 
-        Pyright/Pylance) to resolve `self._settings` as the specific contract type 
-        rather than the abstract base, enabling autocomplete and type safety 
-        for domain-specific fields (e.g., 'headers', 'timeout').
-
-    Requirements for Subclasses:
-        - Must provide a concrete `StreamContract` in the class inheritance brackets.
-        - Must implement the `_settings_contract` property to return the corresponding 
-        Contract class for runtime hydration.
-        - The provided Contract must be a subclass of `StreamContract`.
-
-    Example:
-        >>> class HttpStream(DataStream[HttpContract]):
-        ...     @property
-        ...     def _settings_contract(self) -> Type[HttpContract]:
-        ...         return HttpContract
     """
     def __init__(
-            self, uri: RemoteURL, 
-            as_sink: bool|None = False, 
+            self, 
+            uri: RemoteURL,
+            context: StreamContext,
+            as_sink: bool|None = False,
             policy: StreamPolicy|None = None, 
             **settings
     ) -> None:
-        """Pass parameters to DataStream Base Class
-        - Validates 'as_sink' not valid
-        - Settings filtering and hydration
-        - Defines self._url, self._as_sink, self._policy, self._settings
+        """
+        Initializes the HTTP Transport.
+        :param context: The StreamContext (Passport) inherited from DataStream.
         """
         if as_sink:
             raise NotImplementedError("HTTP Sink not supported.")
         
         # DataStream parameters
-        super().__init__(uri, as_sink, policy, **settings)
+        super().__init__(uri, context, as_sink, policy, **settings)
 
-        # 0. RUNTIME INTEGRITY GUARD (The NewType workaround)
-        # We verify it's a string and contains a network scheme.
+        # 0. RUNTIME INTEGRITY GUARD
         if not isinstance(uri, str) or "://" not in uri:
             raise TypeError(
                 f"HttpStream integrity violation. Expected RemoteURL (string), "
-                f"but received {type(uri)}. Did you provide a ValidatedPath by mistake?"
+                f"but received {type(uri)}."
             )
         # Cast as str from RemoteURL
         self._url: str = str(uri)
 
         # 1. THE CONNECTION POOL (The Engine)
-        # Represents the underlying TCP/HTTP session. 
-        # Managed in open() and close(). Stays alive across multiple reads if needed.
         self._client: Optional[httpx.Client] = None 
 
-        # 2. THE STREAM CONTEXT (The Valve / Lifecycle)
-        # The ContextManager returned by httpx.stream(). 
-        # It controls the "opening" and "closing" of the actual network pipe.
-        # We store it so we can manually exit the context in self.close().
-        self._context: Optional[ContextManager] = None
+        # 2. THE TRANSPORT VALVE (The Network Pipe)
+        # Named uniquely to avoid collision with self._context (The Passport)
+        self._transport_valve: Optional[ContextManager] = None
 
-        # 3. THE RESPONSE DATA (The Payload)
-        # The actual httpx.Response object. 
-        # Provides access to headers, status_codes, and the iter_bytes() method.
+        # 3. THE TRANSPORT RESPONSE (The Data Payload)
         self._response: Optional[httpx.Response] = None
+
+    # --- PROPERTIES ---
+
+    @property
+    def capacity(self) -> StreamCapacity:
+        """
+        HTTP Streams are 'Network' resources:
+        They are typically read-only and sequential (non-seekable).
+        """
+        return StreamCapacity(
+            can_seek=False,
+            is_writable=False,
+            supports_append=False,
+            is_network=True
+        )
 
     @property
     def _settings_contract(self) -> Type[HttpContract]:
@@ -97,80 +81,48 @@ class HttpStream(DataStream[HttpContract]):
     
     @classmethod
     def exists(cls, location: StreamLocation) -> bool:
-        """
-        Atomic Existence Check.
-        
-        Logic:
-        1. Ensure the location is a PhysicalURI (Network coordinate).
-        2. Open a temporary httpx.Client.
-        3. Perform a HEAD request.
-        4. Auto-close the client via context manager (Safety first).
-        """
-        # 1. Type Guard: We only handle Network URIs here
+        """Atomic Existence Check via HEAD request."""
         if not isinstance(location, PhysicalURI):
             return False
 
-        # 2. Atomic Execution: Open, Check, and Burn
-        # No 'persist' logic, no shared state—just a clean, isolated probe.
         try:
-            # We cast location to str because httpx expects a string/URL
             with httpx.Client(timeout=5.0) as client:
                 response = client.head(str(location))
                 return response.is_success
         except (httpx.RequestError, httpx.HTTPStatusError):
-            # Any networking failure or 4xx/5xx error returns False
             return False
 
-    def read(self) -> Iterator[Envelope]:
+    def read(self) -> Iterator[Packet]:
         """
-        Enters the stream context and yields data chunks.
-        Stores state in self._response for external probing/validation.
+        Enters the transport valve and yields traceable Packets.
         """
-        # 1. CLIENT: Open() / Ensure Httpx Client Open and ready
-        # Ensure httpx Client exists
         if self._client is None:
             self.open()
 
-        # Defense check for self._client
         if not self._client:
-            raise RuntimeError(f"Transport client - self._client - FAILED to initialize in read()")
+            raise RuntimeError(f"Transport client failed to initialize.")
         
-        # 2. REQUEST: Prepare Arguments
-        # Dynamic Request Config
-        # - Ensure method, url, params correct
+        # Prepare Request
         request_kwargs = {
             "method": self._settings.method,
             "url": self._url,
             "params": self._settings.params
         }
 
-        # Enforce ability to set body for only POST, PUT, DELETE, PATCH
         payload_methods = {"POST", "PUT", "PATCH", "DELETE"}
-        
-        # Append Content based on Http Method
         if self._settings.method in payload_methods and self._settings.request_body:
-            # Explicit for httpx
             body = self._settings.request_body
-            # Let httpx handle JSON encoding
             if isinstance(body, (dict,list)):
                 request_kwargs["json"] = body
             else:                    
-                # Inject Intruction set / request body as plain text / bytes
                 request_kwargs["content"] = self._settings.request_body
 
-        
-        # 3. ENTER-STREAM: Use http method and append request properties
-        self._context = self._client.stream(**request_kwargs)
-        self._response = self._context.__enter__()
-
-        # 4. RESPONSE
-        # - Enable TypeGuard for IDE runtime check
-        # - Raise Exceptions if any
-
+        # Open the Valve
+        self._transport_valve = self._client.stream(**request_kwargs)
+        self._response = self._transport_valve.__enter__()
         self._response.raise_for_status()
 
-        # 5. STRATEGY: Route Read() method
-        # - Mapping dict[read_mode:self._read_method]
+        # Strategy Dispatch
         strategy_map = {
             HttpReadMode.BYTES: self._read_chunks,
             HttpReadMode.LINES: self._read_lines,
@@ -179,102 +131,91 @@ class HttpStream(DataStream[HttpContract]):
         }
 
         strategy = strategy_map.get(
-            self._settings.read_mode,   # Get method from read_mode
-            self._read_chunks   # Default: Read Bytes
+            self._settings.read_mode, 
+            self._read_chunks 
         )
 
-        # 6. EXECUTE: Yield Envelopes from strategy execution
         yield from strategy()
 
     def close(self) -> None:
-        """
-        Properly unwinds the network stack.
-        Ensures all Linux file descriptors and sockets are released.
-        """
-        # 1. THE STREAM SESSION (The 'Valve')
-        # We must exit the context manager to signal to the server
-        # that we are done with the stream, allowing it to close the connection.
-        if self._context:
+        """Properly unwinds the network stack."""
+        # 1. Close the Valve
+        if self._transport_valve:
             try:
-                # __exit__ arguments are (Exception Type, Value, Traceback)
-                # Passing (None, None, None) signals a clean closure.
-                self._context.__exit__(None, None, None)
-            except Exception as e:
-                # Log or handle unexpected cleanup errors silently 
-                # to ensure we still try to close the client.
-                pass
+                self._transport_valve.__exit__(None, None, None)
             finally:
-                self._context = None
+                self._transport_valve = None
                 self._response = None
 
-        # 2. THE TRANSPORT ENGINE (The 'Line')
-        # Shuts down the connection pool. 
-        # This is critical for preventing 'Too many open files' on Linux.
+        # 2. Close the Engine
         if self._client:
             try:
                 self._client.close()
             finally:
                 self._client = None
     
-    #-----------------------------------------------------------------------------------#
-    # --- READ METHODS ---
-    #-----------------------------------------------------------------------------------#
+    # --- INTERNAL STRATEGY METHODS ---
 
-    def _read_chunks(self) -> Iterator[Envelope]:
-        """Iterates over raw binary chunks (The Universal Default)."""
-        # Type check for safety
+    def _read_chunks(self) -> Iterator[Packet]:
+        """Iterates over raw binary chunks."""
         if not self._response:
             return
 
         for chunk in self._response.iter_bytes(chunk_size=self.chunk_size):
             if chunk:
-                yield Envelope(
+                yield Packet(
                     payload=chunk,
-                    regime=RegimeType.BYTES,
+                    context=self._context, # Stamped with Passport
+                    subject=PayloadSubject.BYTES,
+                    signal=FlowSignal.STREAM_DATA,
                     completeness=Completeness.PARTIAL,
                     metadata={"mode": "bytes", "uri": self._url}
                 )
 
-    def _read_lines(self) -> Iterator[Envelope]:
-        """Iterates over UTF-8 encoded lines (Ideal for CSV/JSONL)."""
+    def _read_lines(self) -> Iterator[Packet]:
+        """Iterates over UTF-8 encoded lines."""
         if not self._response:
             return
 
         for line in self._response.iter_lines():
-            # httpx.iter_lines() yields 'str'; we cast to 'bytes' for predictability
             if line:
-                yield Envelope(
+                yield Packet(
                     payload=line.encode("utf-8"),
-                    regime=RegimeType.BYTES,
-                    completeness=Completeness.COMPLETE, # A line is a finished record
+                    context=self._context,
+                    subject=PayloadSubject.BYTES,
+                    signal=FlowSignal.STREAM_DATA,
+                    completeness=Completeness.COMPLETE,
                     metadata={"mode": "lines"}
                 )
 
-    def _read_text(self) -> Iterator[Envelope]:
-        """Iterates over decoded text chunks (Ideal for large string blobs)."""
+    def _read_text(self) -> Iterator[Packet]:
+        """Iterates over decoded text chunks."""
         if not self._response:
             return
 
         for text_chunk in self._response.iter_text(chunk_size=self.chunk_size):
             if text_chunk:
-                yield Envelope(
+                yield Packet(
                     payload=text_chunk.encode("utf-8"),
-                    regime=RegimeType.BYTES,
+                    context=self._context,
+                    subject=PayloadSubject.BYTES,
+                    signal=FlowSignal.STREAM_DATA,
                     completeness=Completeness.PARTIAL,
                     metadata={"mode": "text"}
                 )
 
-    def _read_raw(self) -> Iterator[Envelope]:
-        """Direct socket pull. Bypasses automatic decompression (Gzip/Brotli)."""
+    def _read_raw(self) -> Iterator[Packet]:
+        """Direct socket pull (uncompressed)."""
         if not self._response:
             return
 
-        # iter_raw() does not accept chunk_size; it yields as data arrives
         for raw_chunk in self._response.iter_raw():
             if raw_chunk:
-                yield Envelope(
+                yield Packet(
                     payload=raw_chunk,
-                    regime=RegimeType.BYTES,
+                    context=self._context,
+                    subject=PayloadSubject.BYTES,
+                    signal=FlowSignal.STREAM_DATA,
                     completeness=Completeness.PARTIAL,
                     metadata={"mode": "raw", "compressed": True}
                 )

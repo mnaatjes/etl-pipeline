@@ -1,10 +1,10 @@
 # src/infrastructure/adapters/posix_file/adapter.py
-
 import os
 from typing import Type, Iterator, Optional, IO
 from pathlib import Path
 from src.app.ports.output.datastream import DataStream
-from src.app.domain.models.envelope import Envelope
+from src.app.domain.models.streams import StreamCapacity, StreamContext
+from src.app.domain.models.packet import Packet, FlowSignal, PayloadSubject, Completeness
 from src.app.domain.models.resource_identity import PhysicalPath, StreamLocation
 from src.infrastructure.adapters.posix_file.contract import PosixFileContract
 from src.infrastructure.adapters.posix_file.policy import PosixFilePolicy
@@ -15,7 +15,14 @@ class PosixFileStream(DataStream[PosixFileContract]):
     Adapter for POSIX - Linux - file I/O
 
     """
-    def __init__(self, uri: StreamLocation, policy: PosixFilePolicy, as_sink: bool | None = False, **settings) -> None:
+    def __init__(
+            self, 
+            uri: StreamLocation,
+            context: StreamContext,
+            policy: PosixFilePolicy, 
+            as_sink: bool = False, 
+            **settings
+    ) -> None:
         """Parent DataStream Parameter Pass"""
         from src.app.domain.models.resource_identity import PhysicalURI
 
@@ -37,7 +44,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
                 f"but received {type(uri)}."
             )
 
-        super().__init__(uri, as_sink, policy, **settings)
+        super().__init__(uri, context, as_sink, policy, **settings)
 
         # Physical Connection between Python and Linux Filesystem
         # - Stores io.TextIOWrapper or io.BufferedRandom object
@@ -46,6 +53,17 @@ class PosixFileStream(DataStream[PosixFileContract]):
         # 2. Re-assert the type for the specific child class
         # This resolves the "Unknown Attribute" error in the methods below.
         self._policy: PosixFilePolicy = policy or PosixFilePolicy()
+
+    # --- PROPERTIES ---
+
+    @property
+    def capacity(self) -> StreamCapacity:
+        return StreamCapacity(
+            can_seek=True,
+            is_writable=True,
+            supports_append=True,
+            is_network=False
+        )
 
     @property
     def _settings_contract(self) -> Type[PosixFileContract]:
@@ -95,7 +113,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
             # We wrap OS errors in a domain-friendly IOError
             raise IOError(f"Could not open {self._path}: {e}")
 
-    def read(self) -> Iterator[Envelope]:
+    def read(self) -> Iterator[Packet]:
         """
         Dispatches reading based on the Contract strategy.
         Yields Envelopes to the StreamManager.
@@ -107,17 +125,35 @@ class PosixFileStream(DataStream[PosixFileContract]):
 
         if strategy == FileReadMode.BYTES:
             while chunk := self._file_handle.read(self.chunk_size):
-                yield Envelope(payload=chunk)
+                yield Packet(
+                    payload=chunk,
+                    context=self._context,
+                    subject=PayloadSubject.BYTES,
+                    signal=FlowSignal.STREAM_DATA,
+                    completeness=Completeness.PARTIAL
+                )
         
         elif strategy == FileReadMode.LINES:
             for line in self._file_handle:
-                yield Envelope(payload=line)
+                yield Packet(
+                    payload=line,
+                    context=self._context,
+                    subject=PayloadSubject.BYTES,
+                    signal=FlowSignal.STREAM_DATA,
+                    completeness=Completeness.COMPLETE
+                )
                 
         elif strategy == FileReadMode.TEXT:
             while chunk := self._file_handle.read(self.chunk_size):
-                yield Envelope(payload=chunk)
+                yield Packet(
+                    payload=chunk,
+                    context=self._context,
+                    subject=PayloadSubject.BYTES,
+                    signal=FlowSignal.STREAM_DATA,
+                    completeness=Completeness.PARTIAL
+                )
 
-    def write(self, envelope: Envelope) -> None:
+    def write(self, packet: Packet) -> None:
         """
         Writes the envelope payload to disk.
         Forces permission sync (os.chmod) on every write to ensure Linux compliance.
@@ -125,7 +161,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
         if not self._file_handle or self._file_handle.closed:
             raise IOError("Attempted to write to a closed stream.")
 
-        self._file_handle.write(envelope.payload)
+        self._file_handle.write(packet.payload)
         
         # Ensure file permissions match the contract (e.g. 0o664)
         if self._as_sink:
