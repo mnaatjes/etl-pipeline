@@ -6,8 +6,13 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Changed
+- Refined the versioning workflow and documentation.
+- Removed outdated `_src/` dir
+- Corrected bumpversion `CHANGELOG` behavior
+- Deleted feat/middleware branch after merge
 
-## [## [Unreleased]] - 2026-03-04
+## [1.2.0] - 2026-03-04
 
 ### Added
 - **Catalog-Aware Resolution**: The `ResourceFactory` now intelligently resolves URIs based on registered catalog anchors.
