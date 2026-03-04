@@ -34,8 +34,8 @@ class ResourceCatalog:
         """Associates a nickname (key) with a protocol and a physical root."""
         if protocol not in self._boundaries:
             raise ValueError(f"No Boundary registered for protocol: {protocol}")
-        
-        self._anchors[key] = key
+
+        self._anchors[key] = anchor
         self._key_protocols[key] = protocol
 
     # --- Core Logic Methods ---
@@ -50,7 +50,7 @@ class ResourceCatalog:
         # 2. Verified Metadata Look-ups
         protocol = self.get_protocol(key) # Promoted to public for StreamManager access
         anchor = self._get_anchor(key)
-        
+
         # 3. Delegate to Boundary for path calculation and security checks
         boundary = self._boundaries[protocol]
         resolved_path = boundary.resolve(uri, anchor)
@@ -59,9 +59,8 @@ class ResourceCatalog:
         # This satisfies the ResourceIdentity contract for ValidatedPath
         if isinstance(resolved_path, PhysicalPath):
             return resolved_path.bind_key(key)
-            
-        return resolved_path
 
+        return resolved_path
     # --- HELPER & METADATA METHODS ---
 
     def get_protocol(self, key: ResourceKey) -> str:

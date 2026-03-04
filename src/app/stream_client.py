@@ -25,9 +25,17 @@ class StreamClient:
     ) -> DataStream:
         """
         Requests a validated Stream instance from the Orchestrator.
-        
-        :param uri: The logical URI (e.g., 'file:///tmp/data.csv').
-        :param as_sink: True for writing, False for reading.
-        :param settings: Tier 3 (Local) overrides for this specific stream.
         """
         return self._manager.get_stream(uri, as_sink=as_sink, **settings)
+
+    def read(self, uri: str) -> Any:
+        """Convenience: Read entire stream contents."""
+        return self._manager.read(uri)
+
+    def write(self, uri: str, data: Any) -> None:
+        """Convenience: Write data to a stream."""
+        self._manager.write(uri, data)
+
+    def exists(self, uri: str) -> bool:
+        """Convenience: Check resource existence."""
+        return self._manager.exists(uri)

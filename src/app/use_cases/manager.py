@@ -109,8 +109,11 @@ class StreamManager:
         """
         Convenience method to open a stream for writing, commit data, and close it.
         """
+        # Domain Import required for wrapping
+        from src.app.domain.models.envelope import Envelope
+        
         with self.get_stream(uri, as_sink=True) as stream:
-            stream.write(data)
+            stream.write(Envelope(payload=data))
 
     def exists(self, uri: str) -> bool:
         """

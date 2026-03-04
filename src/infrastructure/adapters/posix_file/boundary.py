@@ -2,10 +2,10 @@
 
 from pathlib import Path
 from src.app.ports.input.resource_boundary import ResourceBoundary
-from src.app.domain.models.resource_identity import LogicalURI
+from src.app.domain.models.resource_identity import LogicalURI, PhysicalPath
 
 class PosixResourceBoundary(ResourceBoundary[Path]):
-    def resolve(self, uri: LogicalURI, anchor: Path) -> Path:
+    def resolve(self, uri: LogicalURI, anchor: Path) -> PhysicalPath:
         # 1. Standardixe the anchor
         anchor_absolute = anchor.resolve()
 
@@ -23,7 +23,7 @@ class PosixResourceBoundary(ResourceBoundary[Path]):
             raise PermissionError(f"Boundary Violation! {candidate} escaped {anchor_absolute}")
 
         # Return Path Object
-        return candidate
+        return PhysicalPath(candidate)
 
     def is_safe(self, physical_resource: Path, anchor: Path) -> bool:
         try:
