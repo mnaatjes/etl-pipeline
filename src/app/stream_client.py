@@ -1,8 +1,6 @@
-# src/stream_client.py
+# src/app/stream_client.py
 
 from typing import Any, Optional, Dict
-from src.app.bootstrap import Bootstrap
-from src.app.ports.output.datastream import DataStream
 
 class StreamClient:
     """
@@ -14,6 +12,9 @@ class StreamClient:
         Initializes the internal engine via the Bootstrap.
         :param config: Tier 1 (Global) overrides (e.g., from a YAML loader).
         """
+        # Move import inside to break circular dependency
+        from src.app.bootstrap import Bootstrap
+        
         # The 'Big Bang': Manager, Registry, and Resolver are wired here.
         self._manager = Bootstrap.initialize(config_overrides=config)
 
@@ -22,7 +23,7 @@ class StreamClient:
         uri: str, 
         as_sink: bool = False, 
         **settings
-    ) -> DataStream:
+    ) -> Any:
         """
         Requests a validated Stream instance from the Orchestrator.
         """
@@ -39,3 +40,10 @@ class StreamClient:
     def exists(self, uri: str) -> bool:
         """Convenience: Check resource existence."""
         return self._manager.exists(uri)
+
+    def add_resource(self, key: str, protocol: str, anchor: Any) -> None:
+        """
+        Registers a physical resource (e.g., a local directory or S3 bucket) 
+        under a logical name (key).
+        """
+        self._manager.add_resource(key, protocol, anchor)

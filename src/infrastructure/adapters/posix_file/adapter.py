@@ -17,6 +17,10 @@ class PosixFileStream(DataStream[PosixFileContract]):
     """
     def __init__(self, uri:PhysicalPath, policy:PosixFilePolicy, as_sink: bool|None = False, **settings) -> None:
         """Parent DataStream Parameter Pass"""
+        # If writing, default to 'wb' if no mode provided
+        if as_sink and "file_mode" not in settings:
+            settings["file_mode"] = "wb"
+            
         super().__init__(uri, as_sink, policy, **settings)
         # PhysicalPath type for Resource Boundary Catalog / Path() object
         # REAL Type Check: Ensures we aren't dealing with a string

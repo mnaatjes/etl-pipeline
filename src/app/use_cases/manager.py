@@ -103,7 +103,8 @@ class StreamManager:
         Perfect for small config files or JSON payloads.
         """
         with self.get_stream(uri, as_sink=False) as stream:
-            return stream.read()
+            # We must consume the generator while the stream is open
+            return list(stream.read())
 
     def write(self, uri: str, data: Any) -> None:
         """
@@ -157,3 +158,20 @@ class StreamManager:
             # In a High-Resolution architecture, we catch specific domain 
             # errors to indicate a 'False' validation state.
             return False
+
+    # --- Configuration Methods ---
+
+    def add_resource(self, key: str, protocol: str, anchor: Any) -> None:
+        """
+        Registers a new physical anchor in the Resource Catalog.
+        
+        :param key: The logical nickname (e.g., 'scans').
+        :param protocol: The protocol required to access it (e.g., 'posix').
+        :param anchor: The physical root (e.g., Path('/srv/data')).
+        """
+        # If the protocol is POSIX, we ensure the anchor is a Path object
+        if protocol == "posix" and isinstance(anchor, str):
+            from pathlib import Path
+            anchor = Path(anchor)
+            
+        self._catalog.add_anchor(key=key, protocol=protocol, anchor=anchor)

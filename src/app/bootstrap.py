@@ -29,12 +29,21 @@ class Bootstrap:
         app_config = AppConfig(**(config_overrides or {}))
 
         # 2. REGISTRY: Central blueprint storage for Adapters
-        # We register 'posix' as a supported protocol.
+        # We register 'posix' and 'file' as supported protocols for local IO.
         registry = StreamRegistry()
         posix_policy = PosixFilePolicy()
+        
+        # Governed Protocol
         registry.register(
             protocol="posix", 
             adapter_cls=PosixFileStream, 
+            policy=posix_policy
+        )
+        
+        # Direct Protocol
+        registry.register(
+            protocol="file",
+            adapter_cls=PosixFileStream,
             policy=posix_policy
         )
         

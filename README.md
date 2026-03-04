@@ -75,6 +75,47 @@ Convenience method to write data to a URI. Automatically wraps data in a domain 
 ### `exists(uri)`
 Checks if a resource exists at the given URI without opening a stream.
 
+## Resource Access Modes
+
+StreamFlow supports two ways to access data, balancing security/portability with developer speed.
+
+### 1. Governed Access (The `registry://` Scheme)
+This is the **High-Resolution** approach. You map a physical root to a logical "Key" (Anchor) using the `add_resource()` method.
+
+- **Security:** Access is restricted by a `ResourceBoundary`. Users cannot use `../` to escape the anchor.
+- **Portability:** You can change the physical path (or even move from Local Disk to S3) without changing a single line of application code.
+
+**Registration:**
+```python
+client = StreamClient()
+
+# Register a local directory as 'vault'
+client.add_resource(
+    key="vault", 
+    protocol="posix", 
+    anchor="/var/lib/pipeline/data"
+)
+```
+
+**Usage:**
+```python
+# Resolved to: /var/lib/pipeline/data/reports/2026.csv
+client.read("registry://vault/reports/2026.csv")
+```
+
+### 2. Direct Access (The `file://` or `http://` Schemes)
+This is the **Standard** approach. You provide the full physical coordinate.
+
+- **Speed:** No registration required.
+- **Trade-off:** No security boundaries; hardcoded paths make the code less portable across environments (e.g., Linux vs. Windows, Local vs. Cloud).
+
+**Usage:**
+```python
+client.read("file:///tmp/debug_log.txt")
+```
+
+---
+
 ## Configuration & Properties
 
 ### Global Settings (Tier 1)
