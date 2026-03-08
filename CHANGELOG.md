@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
+### Fixed
+- **StreamHandle Lifecycle**: Corrected `StreamHandle.__enter__` to properly delegate to the adapter's context manager, ensuring the `is_open` flag is correctly set in the `DataStream` base class.
 
 ## [## [Unreleased]] - 2026-03-04
 ### Added

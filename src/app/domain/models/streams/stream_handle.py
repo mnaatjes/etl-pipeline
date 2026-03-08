@@ -55,8 +55,8 @@ class StreamHandle:
     # --- CONTEXT MANAGER ---
 
     def __enter__(self) -> 'StreamHandle':
-        self._adapter.open()
+        self._adapter.__enter__()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        self._adapter.close()
+        self._adapter.__exit__(exc_type, exc_val, exc_tb)

@@ -20,10 +20,8 @@ class MiddlewareProcessor(ABC):
     """
 
     @property
-    @abstractmethod
     def name(self) -> str:
-        """The human-readable name of this processor (used for telemetry)."""
-        pass
+        return self.__class__.__name__
 
     @property
     @abstractmethod
