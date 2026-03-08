@@ -28,10 +28,10 @@ To maintain clean separation between domain logic and infrastructure implementat
 | :--- | :--- | :--- | :--- |
 | **Engine Port** | Application (Output) | `src/app/ports/output/pipeline_engine.py` | The abstract interface/contract. |
 | **Engine Registry** | Application (Registry) | `src/app/registry/engines.py` | The "Librarian" for pluggable engines. |
-| **Pipeline Builder** | Application (Use Case) | `src/app/use_cases/pipeline_builder.py` | The Fluent DSL for constructing blueprints. |
+| **Trace Provider** | Domain (Service) | `src/app/domain/services/traceability_provider.py` | The SSoT for `trace_id` resolution. |
+| **Pipeline Builder** | Application (Use Case) | `src/app/use_cases/pipeline_builder.py` | The Fluent DSL with Contract Adjudication. |
 | **Pipeline Runner** | Application (Use Case) | `src/app/use_cases/pipeline_runner.py` | The "Conductor" coordinating the flow. |
-| **Local Engine** | Infrastructure (Adapter)| `src/infrastructure/engines/local_engine.py` | Sequential execution implementation. |
-| **Async Engine** | Infrastructure (Adapter)| `src/infrastructure/engines/async_engine.py` | Concurrent/Async execution implementation. |
+| **Local Engine** | Infrastructure (Adapter)| `src/infrastructure/engines/local_engine.py` | Sequential/Broadcast implementation. |
 
 ---
 

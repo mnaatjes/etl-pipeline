@@ -2,7 +2,7 @@ from typing import Any, Dict, Optional, Iterator
 from uuid import uuid4
 
 # Domain Imports
-from src.app.domain.models.resource_identity import StreamLocation, PhysicalPath, PhysicalURI
+from src.app.domain.models.resource_identity import StreamLocation, PhysicalPath, PhysicalURI, ResourceKey
 from src.app.domain.models.app_config import AppConfig
 from src.app.domain.models.streams import StreamHandle, StreamContext, StreamCapacity
 from src.app.domain.models.packet import Packet
@@ -13,6 +13,7 @@ from src.app.domain.services.resource_catalog import ResourceCatalog
 from src.app.domain.services.settings_resolver import SettingsResolver
 from src.app.ports.output.datastream import DataStream
 from src.app.registry.streams import StreamRegistry
+from src.app.domain.services.traceability_provider import TraceabilityProvider
 
 class StreamManager:
     """
@@ -67,10 +68,18 @@ class StreamManager:
         
         # 5. CONTEXT CREATION: The Passport
         # We generate a unique trace_id for this specific stream lifecycle.
+
+        # Catch the trace_id (if in overrides) and resolve
+        # - Prevents Adapter Pollution
+        # - Pop is safe if key not present
+        popped_trace = overrides.pop("trace_id", None)
+        trace_id = TraceabilityProvider.resolve(user_override=popped_trace)
+
+        # Form Stream Context
         context = StreamContext(
             origin=uri,
             current=str(location),
-            trace_id=str(uuid4())[:12]
+            trace_id=trace_id
         )
 
         # 6. CALCULATE: Settings Waterfall
@@ -108,19 +117,19 @@ class StreamManager:
     
     # --- Action Methods ---
 
-    def read(self, uri: str) -> Iterator[Packet]:
+    def read(self, uri: str, **overrides) -> Iterator[Packet]:
         """
         Convenience method to read traceable Packets from a URI.
         """
-        handle = self.get_handle(uri, as_sink=False)
+        handle = self.get_handle(uri, as_sink=False, **overrides)
         with handle as stream:
             yield from stream.read()
 
-    def write(self, uri: str, data: Any) -> None:
+    def write(self, uri: str, data: Any, **overrides) -> None:
         """
         Convenience method to write data to a stream.
         """
-        handle = self.get_handle(uri, as_sink=True)
+        handle = self.get_handle(uri, as_sink=True, **overrides)
         with handle as stream:
             stream.write(data)
 
@@ -161,4 +170,4 @@ class StreamManager:
             from pathlib import Path
             anchor = Path(anchor)
             
-        self._catalog.add_anchor(key=key, protocol=protocol, anchor=anchor)
+        self._catalog.add_anchor(key=ResourceKey(key), protocol=protocol, anchor=anchor)
