@@ -60,6 +60,7 @@ class HttpStream(DataStream[HttpContract]):
         """
         return StreamCapacity(
             can_seek=False,
+            is_readable=True,
             is_writable=False,
             supports_append=False,
             is_network=True

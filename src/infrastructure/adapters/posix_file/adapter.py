@@ -60,6 +60,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
     def capacity(self) -> StreamCapacity:
         return StreamCapacity(
             can_seek=True,
+            is_readable=True,
             is_writable=True,
             supports_append=True,
             is_network=False

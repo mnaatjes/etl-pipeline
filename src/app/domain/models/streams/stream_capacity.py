@@ -4,6 +4,7 @@ from dataclasses import dataclass
 @dataclass(frozen=True)
 class StreamCapacity:
     can_seek:bool
+    is_readable: bool
     is_writable:bool
     supports_append:bool
     is_network:bool
