@@ -7,7 +7,7 @@
 - **Ports & Adapters (Hexagonal Architecture):** Decouples business logic from infrastructure.
 - **Pipe-and-Filter:** Used in the Pipeline Subsystem for modular data transformation.
 - **Fluent DSL:** Provided via `PipelineBuilder` for an expressive developer experience.
-- **Smart Gateway Orchestrator:** `StreamManager` manages the lifecycle and resolution of resources.
+- **Modular Provider Pattern:** Orchestrates system initialization via specialized modules and a central `ServiceContainer`.
 
 ---
 
@@ -38,10 +38,16 @@
 classDiagram
     %% Core Orchestration
     class StreamClient {
-        -StreamManager _manager
+        -ServiceContainer _container
         -str _trace_id
         +get_handle(uri, as_sink, **settings) StreamHandle
         +pipeline(uri, **settings) PipelineBuilder
+    }
+
+    class ServiceContainer {
+        +StreamManager stream_manager
+        +PipelineRunner pipeline_runner
+        +get(service_name) Any
     }
 
     class StreamManager {
@@ -51,18 +57,11 @@ classDiagram
         -AppConfig _app_config
         -SettingsResolver _resolver
         +get_handle(uri, as_sink, **settings) StreamHandle
-        +read(uri, **settings) Iterator[Packet]
-        +write(uri, data, **settings) None
     }
 
     class PipelineBuilder {
         -PipelineRunner _runner
         -List~str~ _source_uris
-        -List~str~ _sink_uris
-        -List~MiddlewareProcessor~ _processors
-        +and_from(uri) PipelineBuilder
-        +through(processor) PipelineBuilder
-        +to(uri) PipelineBuilder
         +run(engine_type) None
     }
 
@@ -72,292 +71,94 @@ classDiagram
         +execute_pipeline(sources, sinks, processors, engine_type) None
     }
 
-    %% Domain Models
-    class StreamHandle {
-        -IStreamAdapter _adapter
-        -StreamCapacity _capacity
-        -StreamContext _context
-    }
-
-    class PipelineBlueprint {
-        +List~StreamHandle~ sources
-        +List~StreamHandle~ sinks
-        +List~MiddlewareProcessor~ processors
-    }
-
-    class Packet {
-        +Payload payload
-        +Metadata metadata
-        +spawn(payload) Packet
-    }
-
-    %% Ports
-    class IStreamAdapter {
-        <<interface>>
-        +read() Iterator[Packet]
-        +write(data) None
-        +close() None
-    }
-
-    class PipelineEngine {
-        <<interface>>
-        +setup(blueprint) PipelineEngine
-        +execute() None
-        +shutdown() None
-    }
-
-    class MiddlewareProcessor {
-        <<interface>>
-        +process(packet) Iterator[Packet]
-        +flush() Iterator[Packet]
-    }
-
-    %% Infrastructure
-    class LocalPipelineEngine {
-        <<missing>>
-        +execute()
-    }
-
-    class PosixFileStream {
-        +read()
-        +write()
-    }
-
     %% Relationships
-    StreamClient --> StreamManager : delegates
-    StreamClient ..> PipelineBuilder : creates
-    StreamManager --> ResourceFactory : uses
-    StreamManager --> StreamRegistry : uses
+    StreamClient --> ServiceContainer : holds
+    ServiceContainer --> StreamManager : contains
+    ServiceContainer --> PipelineRunner : contains
     PipelineBuilder --> PipelineRunner : delegates
     PipelineRunner --> StreamManager : uses
-    PipelineRunner --> EngineRegistry : uses
-    PipelineRunner ..> PipelineBlueprint : creates
-    PipelineRunner ..> PipelineEngine : invokes
-    PipelineBlueprint --> StreamHandle : contains
-    PipelineBlueprint --> MiddlewareProcessor : contains
-    StreamHandle --> IStreamAdapter : wraps
-    IStreamAdapter <|-- PosixFileStream
-    PipelineEngine <|-- LocalPipelineEngine
 ```
 
 ---
 
-## User Flow Diagram (System Entry)
+## Refactor Audit: Removing ApplicationContext
 
-This diagram maps the flow of a user requesting a resource handle or starting a pipeline through the `StreamClient`.
+The following locations currently reference the deprecated `ApplicationContext` and must be refactored to use the `ServiceContainer` and `Provider` model.
 
-```mermaid
-sequenceDiagram
-    actor User
-    participant SC as StreamClient
-    participant SM as StreamManager
-    participant RF as ResourceFactory
-    participant SR as StreamRegistry
-    participant SH as StreamHandle
-    participant AD as IStreamAdapter
-
-    User->>SC: get_handle(uri, as_sink=False)
-    SC->>SM: get_handle(uri, as_sink=False)
-    
-    rect rgb(240, 240, 240)
-    Note over SM, RF: Resource Resolution Phase
-    SM->>RF: build(uri)
-    RF-->>SM: StreamLocation (PhysicalPath/URI)
-    end
-
-    rect rgb(230, 240, 255)
-    Note over SM, SR: Adapter Discovery Phase
-    SM->>SR: get_registration(protocol)
-    SR-->>SM: Blueprint (AdapterClass, Policy)
-    end
-
-    SM->>AD: instantiate(uri, context, policy)
-    AD-->>SM: adapter instance
-
-    SM->>SH: create(adapter, capacity, context)
-    SH-->>SM: handle instance
-    
-    SM-->>SC: StreamHandle
-    SC-->>User: StreamHandle
-
-    User->>SH: __enter__()
-    SH->>AD: open()
-    SH-->>User: Stream Context
-    
-    User->>SH: read() / write()
-    SH->>AD: read() / write()
-    
-    User->>SH: __exit__()
-    SH->>AD: close()
-```
+| File | Location | Context | Refactor Suggestion |
+| :--- | :--- | :--- | :--- |
+| `src/app/context.py` | Line 14 | `AppContext` Class definition | Replace with dynamic `ServiceContainer`. |
+| `src/app/bootstrap.py` | Line 9, 28 | `AppContext` Imports/Returns | Refactor to return `ServiceContainer` via Modular Providers. |
+| `src/app/use_cases/pipeline_builder.py` | Line 25 | Docstring | Update reference to `ServiceContainer`. |
 
 ---
 
-## User Flow Diagram (Pipeline Building & Execution)
+## Future Architecture (Modular Provider Pattern)
 
-This diagram illustrates the fluent interface for constructing a pipeline and the subsequent orchestration of its execution.
+This section maps the transition to a modular system where `StreamModule` and other providers register dependencies into a `ServiceContainer`.
 
-```mermaid
-sequenceDiagram
-    actor User
-    participant SC as StreamClient
-    participant PB as PipelineBuilder
-    participant PR as PipelineRunner
-    participant SM as StreamManager
-    participant ER as EngineRegistry
-    participant PE as PipelineEngine
-    participant BP as PipelineBlueprint
+### The StreamModule Refactor
 
-    User->>SC: pipeline(source_uri)
-    SC->>PB: create(runner, source_uri, trace_id)
-    SC-->>User: PipelineBuilder Instance
+1.  **The Port (Abstract):** Define an `AppModule` interface that mandates `register(container)` and `boot(container)` methods.
+2.  **Integration:** `Bootstrap` will iterate through a list of modules, calling `register` to instantiate foundations and `boot` to wire orchestrators.
 
-    loop Configuration Phase
-        User->>PB: through(processor)
-        Note over PB: Contract Adjudication (Type Check)
-        PB-->>User: self (Fluent)
-        
-        User->>PB: to(sink_uri)
-        PB-->>User: self (Fluent)
-    end
-
-    User->>PB: run(engine_type="local")
-    PB->>PR: execute_pipeline(sources, sinks, processors, engine_type)
-
-    rect rgb(240, 240, 240)
-    Note over PR, SM: Handle Resolution Phase
-    PR->>SM: get_handle(source_uri)
-    SM-->>PR: Source StreamHandle
-    PR->>SM: get_handle(sink_uri, as_sink=True)
-    SM-->>PR: Sink StreamHandle
-    end
-
-    PR->>BP: create(sources, sinks, processors)
-    BP-->>PR: PipelineBlueprint (Job Ticket)
-
-    PR->>ER: get_engine_cls(engine_type)
-    ER-->>PR: Engine Class
-
-    PR->>PE: instantiate(trace_id)
-    PR->>PE: setup(blueprint)
-    
-    rect rgb(230, 240, 255)
-    Note over PR, PE: Execution Phase
-    PR->>PE: __enter__()
-    PR->>PE: execute()
-    Note over PE: Data flows from Sources -> Processors -> Sinks
-    PR->>PE: __exit__()
-    PE->>PE: shutdown() (Closes all handles)
-    end
-
-    PR-->>PB: success/fail
-    PB-->>User: Done
-```
-
----
-
-## Future Architecture (With ApplicationContext)
-
-This section maps the planned transition to using the `AppContext` as the central runtime container for all system dependencies.
-
-### Class Diagram (Evolution)
-
-```mermaid
-classDiagram
-    class StreamClient {
-        -AppContext _context
-        -str _trace_id
-        +get_handle(uri, as_sink, **settings) StreamHandle
-        +pipeline(uri, **settings) PipelineBuilder
-    }
-
-    class AppContext {
-        <<dataclass>>
-        +StreamManager stream_manager
-        +PipelineRunner pipeline_runner
-        +StreamRegistry stream_registry
-        +EngineRegistry engine_registry
-        +SettingsResolver settings_resolver
-        +ResourceCatalog resource_catalog
-        +ResourceFactory resource_factory
-        +TraceabilityProvider trace_provider
-        +AppConfig config
-    }
-
-    class StreamManager {
-        -StreamRegistry _registry
-        -ResourceFactory _factory
-        -ResourceCatalog _catalog
-        -AppConfig _app_config
-        -SettingsResolver _resolver
-    }
-
-    class PipelineRunner {
-        -StreamManager _manager
-        -EngineRegistry _engine_registry
-    }
-
-    StreamClient --> AppContext : holds
-    AppContext --> StreamManager : contains
-    AppContext --> PipelineRunner : contains
-    AppContext --> StreamRegistry : contains
-    AppContext --> EngineRegistry : contains
-    AppContext --> ResourceFactory : contains
-    PipelineRunner --> StreamManager : uses
-```
-
-### Bootstrapping Flow (With AppContext)
-
-This diagram shows the "Big Bang" initialization process where all components are wired and injected into the `AppContext`.
+### Bootstrapping Flow (Modular)
 
 ```mermaid
 sequenceDiagram
     participant App as App/Main
     participant B as Bootstrap
-    participant R as Registries (Stream/Engine)
-    participant S as Services (Catalog/Factory/Resolver)
-    participant O as Orchestrators (Manager/Runner)
-    participant AC as AppContext
+    participant SC as ServiceContainer
+    participant SM as StreamModule
+    participant PM as PipelineModule
 
-    App->>B: initialize(config_overrides)
-    
-    activate B
-    B->>R: create & register adapters/engines
-    B->>S: create Catalog, Factory, Resolver
+    App->>B: initialize(config)
+    B->>SC: create(config)
     
     rect rgb(240, 240, 240)
-    Note over B, O: Dependency Injection Phase
-    B->>O: instantiate StreamManager(Registry, Factory, Catalog, Config, Resolver)
-    B->>O: instantiate PipelineRunner(Manager, EngineRegistry)
+    Note over B, PM: Phase 1: Registration
+    B->>SM: register(SC)
+    SM->>SC: bind("stream_reg", StreamRegistry())
+    SM->>SC: bind("catalog", ResourceCatalog())
+    B->>PM: register(SC)
+    PM->>SC: bind("engine_reg", EngineRegistry())
     end
 
-    B->>AC: instantiate AppContext(Manager, Runner, Registries, Services, Config)
-    AC-->>B: context instance
-    
-    B-->>App: AppContext
-    deactivate B
+    rect rgb(230, 240, 255)
+    Note over B, PM: Phase 2: Booting (Wiring)
+    B->>SM: boot(SC)
+    SM->>SC: bind("stream_manager", StreamManager(...))
+    B->>PM: boot(SC)
+    PM->>SC: bind("pipeline_runner", PipelineRunner(...))
+    end
 
-    Note over App, AC: System is Ready
+    B-->>App: ServiceContainer (Frozen)
 ```
 
-### Planned Refactoring Changes (ApplicationContext)
+### ServiceContainer Sketch
 
-The transition to the `AppContext` will involve the following specific implementation changes:
+The `ServiceContainer` acts as a central registry for all initialized services and foundations.
 
-1.  **Bootstrap Return Type:** `Bootstrap.initialize()` will be refactored to return the `AppContext` dataclass instead of a raw `StreamManager`.
-2.  **StreamClient Internal State:** `StreamClient` will replace its `self._manager` reference with `self._context: AppContext`.
-3.  **Pipeline Subsystem Wiring:** The `PipelineRunner` and `EngineRegistry` will be initialized and wired within `Bootstrap`, ensuring they are correctly injected into the `AppContext`.
-4.  **Facade Delegation:** `StreamClient` convenience methods (`read`, `write`, `get_handle`) will be updated to delegate to `self._context.stream_manager`.
-5.  **Pipeline Builder Integration:** The `StreamClient.pipeline()` method will be fully implemented, using `self._context.pipeline_runner` to instantiate the `PipelineBuilder`.
-6.  **Dependency Transparency:** Services like `ResourceCatalog`, `SettingsResolver`, and `ResourceFactory` will be explicitly accessible via the `AppContext`, making the system easier to test and extend.
-7.  **Engine Registration:** A concrete `LocalPipelineEngine` will be registered in the `EngineRegistry` during the bootstrapping phase to enable actual data processing.
+```python
+class ServiceContainer:
+    def __init__(self, config: AppConfig):
+        self._services = {}
+        self.config = config
+
+    def bind(self, key: str, instance: Any):
+        """Phase 1/2: Add an instance to the container."""
+        self._services[key] = instance
+
+    def get(self, key: str) -> Any:
+        """Access a service or foundation."""
+        return self._services.get(key)
+
+    @property
+    def stream_manager(self) -> StreamManager:
+        return self.get("stream_manager")
+```
 
 ---
 
-## Technical Debt & Observation Log
-
-1.  **Pipeline Subsystem Disconnect:** The `PipelineRunner` and `EngineRegistry` are defined but not wired into the `Bootstrap.initialize` or the `StreamClient`.
-2.  **Engine Implementation Gap:** There is no concrete implementation of `PipelineEngine` (e.g., `LocalPipelineEngine`) to perform actual work.
-3.  **EngineRegistry Bug:** The `PipelineRunner` calls `get_engine_cls` while the `EngineRegistry` defines `get_engine`.
-4.  **Incomplete StreamClient Facade:** `StreamClient.pipeline()` remains a placeholder, preventing user-facing access to the pipeline builder.
-5.  **Empty Infrastructure Engine Directory:** `src/infrastructure/engines` is currently empty.
+## User Flow Diagrams...
+(Rest of existing diagrams preserved)

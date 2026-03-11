@@ -6,6 +6,7 @@ from src.app.domain.services.resource_catalog import ResourceCatalog
 from src.app.domain.services.resource_factory import ResourceFactory
 from src.app.registry.streams import StreamRegistry
 from src.app.use_cases.manager import StreamManager
+from src.app.context import AppContext
 
 # Infrastructure Imports
 from src.infrastructure.adapters.posix_file.adapter import PosixFileStream
@@ -21,7 +22,10 @@ class Bootstrap:
     """
 
     @staticmethod
-    def initialize(config_overrides: Optional[Dict[str, Any]] = None) -> StreamManager:
+    def initialize(
+        config_overrides: Optional[Dict[str, Any]] = None,
+        logger: Optional[Any] = None # TODO: Add logger eventually
+    ) -> AppContext:
         """
         Orchestrates the creation and injection of all core services.
         """
