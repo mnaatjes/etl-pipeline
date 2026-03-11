@@ -193,6 +193,69 @@ sequenceDiagram
 
 ---
 
+## User Flow Diagram (Pipeline Building & Execution)
+
+This diagram illustrates the fluent interface for constructing a pipeline and the subsequent orchestration of its execution.
+
+```mermaid
+sequenceDiagram
+    actor User
+    participant SC as StreamClient
+    participant PB as PipelineBuilder
+    participant PR as PipelineRunner
+    participant SM as StreamManager
+    participant ER as EngineRegistry
+    participant PE as PipelineEngine
+    participant BP as PipelineBlueprint
+
+    User->>SC: pipeline(source_uri)
+    SC->>PB: create(runner, source_uri, trace_id)
+    SC-->>User: PipelineBuilder Instance
+
+    loop Configuration Phase
+        User->>PB: through(processor)
+        Note over PB: Contract Adjudication (Type Check)
+        PB-->>User: self (Fluent)
+        
+        User->>PB: to(sink_uri)
+        PB-->>User: self (Fluent)
+    end
+
+    User->>PB: run(engine_type="local")
+    PB->>PR: execute_pipeline(sources, sinks, processors, engine_type)
+
+    rect rgb(240, 240, 240)
+    Note over PR, SM: Handle Resolution Phase
+    PR->>SM: get_handle(source_uri)
+    SM-->>PR: Source StreamHandle
+    PR->>SM: get_handle(sink_uri, as_sink=True)
+    SM-->>PR: Sink StreamHandle
+    end
+
+    PR->>BP: create(sources, sinks, processors)
+    BP-->>PR: PipelineBlueprint (Job Ticket)
+
+    PR->>ER: get_engine_cls(engine_type)
+    ER-->>PR: Engine Class
+
+    PR->>PE: instantiate(trace_id)
+    PR->>PE: setup(blueprint)
+    
+    rect rgb(230, 240, 255)
+    Note over PR, PE: Execution Phase
+    PR->>PE: __enter__()
+    PR->>PE: execute()
+    Note over PE: Data flows from Sources -> Processors -> Sinks
+    PR->>PE: __exit__()
+    PE->>PE: shutdown() (Closes all handles)
+    end
+
+    PR-->>PB: success/fail
+    PB-->>User: Done
+```
+
+---
+
 ## Technical Debt & Observation Log
 
 1.  **Pipeline Subsystem Disconnect:** The `PipelineRunner` and `EngineRegistry` are defined but not wired into the `Bootstrap.initialize` or the `StreamClient`.
