@@ -256,6 +256,104 @@ sequenceDiagram
 
 ---
 
+## Future Architecture (With ApplicationContext)
+
+This section maps the planned transition to using the `AppContext` as the central runtime container for all system dependencies.
+
+### Class Diagram (Evolution)
+
+```mermaid
+classDiagram
+    class StreamClient {
+        -AppContext _context
+        -str _trace_id
+        +get_handle(uri, as_sink, **settings) StreamHandle
+        +pipeline(uri, **settings) PipelineBuilder
+    }
+
+    class AppContext {
+        <<dataclass>>
+        +StreamManager stream_manager
+        +PipelineRunner pipeline_runner
+        +StreamRegistry stream_registry
+        +EngineRegistry engine_registry
+        +SettingsResolver settings_resolver
+        +ResourceCatalog resource_catalog
+        +ResourceFactory resource_factory
+        +TraceabilityProvider trace_provider
+        +AppConfig config
+    }
+
+    class StreamManager {
+        -StreamRegistry _registry
+        -ResourceFactory _factory
+        -ResourceCatalog _catalog
+        -AppConfig _app_config
+        -SettingsResolver _resolver
+    }
+
+    class PipelineRunner {
+        -StreamManager _manager
+        -EngineRegistry _engine_registry
+    }
+
+    StreamClient --> AppContext : holds
+    AppContext --> StreamManager : contains
+    AppContext --> PipelineRunner : contains
+    AppContext --> StreamRegistry : contains
+    AppContext --> EngineRegistry : contains
+    AppContext --> ResourceFactory : contains
+    PipelineRunner --> StreamManager : uses
+```
+
+### Bootstrapping Flow (With AppContext)
+
+This diagram shows the "Big Bang" initialization process where all components are wired and injected into the `AppContext`.
+
+```mermaid
+sequenceDiagram
+    participant App as App/Main
+    participant B as Bootstrap
+    participant R as Registries (Stream/Engine)
+    participant S as Services (Catalog/Factory/Resolver)
+    participant O as Orchestrators (Manager/Runner)
+    participant AC as AppContext
+
+    App->>B: initialize(config_overrides)
+    
+    activate B
+    B->>R: create & register adapters/engines
+    B->>S: create Catalog, Factory, Resolver
+    
+    rect rgb(240, 240, 240)
+    Note over B, O: Dependency Injection Phase
+    B->>O: instantiate StreamManager(Registry, Factory, Catalog, Config, Resolver)
+    B->>O: instantiate PipelineRunner(Manager, EngineRegistry)
+    end
+
+    B->>AC: instantiate AppContext(Manager, Runner, Registries, Services, Config)
+    AC-->>B: context instance
+    
+    B-->>App: AppContext
+    deactivate B
+
+    Note over App, AC: System is Ready
+```
+
+### Planned Refactoring Changes (ApplicationContext)
+
+The transition to the `AppContext` will involve the following specific implementation changes:
+
+1.  **Bootstrap Return Type:** `Bootstrap.initialize()` will be refactored to return the `AppContext` dataclass instead of a raw `StreamManager`.
+2.  **StreamClient Internal State:** `StreamClient` will replace its `self._manager` reference with `self._context: AppContext`.
+3.  **Pipeline Subsystem Wiring:** The `PipelineRunner` and `EngineRegistry` will be initialized and wired within `Bootstrap`, ensuring they are correctly injected into the `AppContext`.
+4.  **Facade Delegation:** `StreamClient` convenience methods (`read`, `write`, `get_handle`) will be updated to delegate to `self._context.stream_manager`.
+5.  **Pipeline Builder Integration:** The `StreamClient.pipeline()` method will be fully implemented, using `self._context.pipeline_runner` to instantiate the `PipelineBuilder`.
+6.  **Dependency Transparency:** Services like `ResourceCatalog`, `SettingsResolver`, and `ResourceFactory` will be explicitly accessible via the `AppContext`, making the system easier to test and extend.
+7.  **Engine Registration:** A concrete `LocalPipelineEngine` will be registered in the `EngineRegistry` during the bootstrapping phase to enable actual data processing.
+
+---
+
 ## Technical Debt & Observation Log
 
 1.  **Pipeline Subsystem Disconnect:** The `PipelineRunner` and `EngineRegistry` are defined but not wired into the `Bootstrap.initialize` or the `StreamClient`.
