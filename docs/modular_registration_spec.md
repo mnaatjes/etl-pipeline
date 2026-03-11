@@ -43,27 +43,44 @@ class AppModule(ABC):
 
 ## 2. Module Implementations
 
-### A. StreamModule (Core I/O)
+### A. ConfigModule (Foundations)
+Handles the initialization and resolution of global application settings.
+
+```python
+class ConfigModule(AppModule):
+    def __init__(self, overrides: dict):
+        self.overrides = overrides
+
+    def register(self, container: 'ServiceContainer'):
+        # Instantiate the raw configuration model
+        config = AppConfig(**(self.overrides or {}))
+        container.bind("config", config)
+
+    def boot(self, container: 'ServiceContainer'):
+        # No complex wiring needed for config
+        pass
+```
+
+### B. StreamModule (Core I/O)
 Responsible for identity resolution and storage adapters.
 
 ```python
 class StreamModule(AppModule):
     def register(self, container: 'ServiceContainer'):
-        # 1. Foundations
         container.bind("stream_registry", StreamRegistry())
         container.bind("resource_catalog", ResourceCatalog())
         container.bind("settings_resolver", SettingsResolver())
         
-        # 2. Self-Registering Infrastructure
+        # Self-Registering Infrastructure
         reg = container.get("stream_registry")
         reg.register("posix", PosixFileStream, policy=PosixFilePolicy())
+        reg.register("file", PosixFileStream, policy=PosixFilePolicy())
         reg.register("http", HttpStream)
         
         cat = container.get("resource_catalog")
         cat.register("posix", PosixResourceBoundary())
 
     def boot(self, container: 'ServiceContainer'):
-        # 3. Orchestration
         # Requires Registry, Catalog, and Resolver from Phase 1
         factory = ResourceFactory(
             catalog=container.get("resource_catalog"),
@@ -81,22 +98,16 @@ class StreamModule(AppModule):
         container.bind("stream_manager", manager)
 ```
 
-### B. PipelineModule (Workflows)
+### C. PipelineModule (Workflows)
 Responsible for transformation logic and execution engines.
 
 ```python
 class PipelineModule(AppModule):
     def register(self, container: 'ServiceContainer'):
-        # 1. Foundations
         container.bind("engine_registry", EngineRegistry())
-        
-        # 2. Self-Registering Infrastructure
-        # engine_reg = container.get("engine_registry")
-        # engine_reg.register("local", LocalPipelineEngine)
 
     def boot(self, container: 'ServiceContainer'):
-        # 3. Orchestration
-        # Requires StreamManager from StreamModule's boot phase
+        # Depends on the manager created in StreamModule.boot()
         runner = PipelineRunner(
             manager=container.get("stream_manager"),
             engine_registry=container.get("engine_registry")
@@ -105,78 +116,138 @@ class PipelineModule(AppModule):
         container.bind("pipeline_runner", runner)
 ```
 
-### C. ObservabilityModule (Example 3rd Module)
-Responsible for logging, telemetry, and health monitoring.
+### D. ObservabilityModule (Example)
+Responsible for logging and traceability.
 
 ```python
 class ObservabilityModule(AppModule):
     def register(self, container: 'ServiceContainer'):
-        # 1. Foundations
-        # Bind the provider that ensures all components have a trace ID
         container.bind("trace_provider", TraceabilityProvider())
 
     def boot(self, container: 'ServiceContainer'):
-        # 2. Cross-Module Integration
-        # We might "wrap" the StreamManager with a logging decorator 
-        # or register a global error handler here.
         pass
 ```
 
 ---
 
-## 3. Registration Mechanism & Order
+## 3. The Bootstrap Process
 
-### A. The Mechanism
-Modules use **Explicit Dependency Injection** via the `ServiceContainer`.
-*   **Encapsulated Logic:** The `StreamModule` internally knows which adapters (`Posix`, `Http`) to register into its own registry.
-*   **Key-Value Binding:** Dependencies are stored under string keys (e.g., `"stream_manager"`) to allow dynamic lookups without circular imports.
-*   **Self-Assembly:** Each module is a "Black Box" to the Bootstrapper; the Bootstrapper only knows to call `register()` then `boot()`.
+### 3.1 Order of Operations (Call Flow)
+1.  **User/Application:** Calls `FlowClient(config=...)`.
+2.  **FlowClient:** Instantiates `Bootstrap` and calls `initialize(config)`.
+3.  **Bootstrap:**
+    *   Creates a new `ServiceContainer(config)`.
+    *   Instantiates a list of `AppModule` objects (Config, Stream, Pipeline, etc.).
+    *   **Loop 1 (Register):** Calls `.register(container)` on every module. Foundations are built.
+    *   **Loop 2 (Boot):** Calls `.boot(container)` on every module. Orchestrators are wired.
+4.  **Bootstrap:** Returns the fully-wired `ServiceContainer`.
+5.  **FlowClient:** Stores the container and exposes user-facing methods.
 
-### B. The Order of Assembly
-The Bootstrapper executes in two distinct loops across all modules:
+### 3.2 Refactored Bootstrap Class
 
-1.  **Register Loop (All Modules):** 
-    *   `ObservabilityModule.register()`
-    *   `StreamModule.register()`
-    *   `PipelineModule.register()`
-2.  **Boot Loop (All Modules):**
-    *   `ObservabilityModule.boot()`
-    *   `StreamModule.boot()`
-    *   `PipelineModule.boot()`
+```python
+class Bootstrap:
+    """
+    The Composition Root.
+    Orchestrates the multi-phase modular initialization.
+    """
+    @staticmethod
+    def initialize(config_overrides: dict) -> ServiceContainer:
+        # 1. Initialize the central container
+        # We handle config first to ensure it's available to modules
+        config_module = ConfigModule(config_overrides)
+        container = ServiceContainer()
+        
+        # 2. Define the Module List (The Order Matters!)
+        modules = [
+            config_module,
+            ObservabilityModule(),
+            StreamModule(),
+            PipelineModule()
+        ]
+
+        # 3. Phase 1: Registration (Foundations)
+        for module in modules:
+            module.register(container)
+
+        # 4. Phase 2: Booting (Wiring)
+        for module in modules:
+            module.boot(container)
+
+        return container
+```
+
+### 3.3 Source Code Audit & Refactor Summary
+
+| File | Change Required | Logic to Move |
+| :--- | :--- | :--- |
+| `src/app/bootstrap.py` | Replace entire `initialize` method. | Move all hardcoded `register()` calls and `Manager` instantiation into `StreamModule` and `ConfigModule`. |
+| `src/app/context.py` | Rename `AppContext` to `ServiceContainer`. | Change from a frozen dataclass to a dynamic dictionary-backed container. |
+| `src/app/stream_client.py` | Refactor `__init__` and rename class. | Update to use the `ServiceContainer` instead of the raw `StreamManager`. |
 
 ---
 
-## 4. Initialization Summary
+## 4. User-Client Refactor
 
-### Sequence Diagram
+### 4.1 Class Renaming Suggestions
+Since the library now supports more than just "Streams" (specifically the new Pipeline subsystem), the name `StreamClient` is too narrow.
+
+**Suggested Names:**
+1.  **`FlowClient`**: Short, professional, and reflects the data-flow nature of both streams and pipelines.
+2.  **`StreamFlow`**: Matches the project name; clean and recognizable.
+3.  **`PipelineClient`**: Better for the pipeline focus, but ignores simple stream I/O.
+
+**Selected Name:** **`FlowClient`** (or `StreamFlow` if used as a static entry point).
+
+### 4.2 Implementation Changes
+- **Internal Storage:** Replace `self._manager` with `self._container`.
+- **Delegation:** User methods will now delegate to specific orchestrators within the container.
+
+```python
+class FlowClient:
+    def __init__(self, config=None):
+        self._container = Bootstrap.initialize(config)
+
+    def read(self, uri, **overrides):
+        # Delegate to StreamManager
+        return self._container.stream_manager.read(uri, **overrides)
+
+    def pipeline(self, uri):
+        # Delegate to PipelineRunner
+        return PipelineBuilder(
+            runner=self._container.pipeline_runner,
+            initial_source_uri=uri
+        )
+```
+
+---
+
+## 5. Summary Diagram
 
 ```mermaid
 sequenceDiagram
-    participant B as Bootstrapper
+    participant User
+    participant FC as FlowClient
+    participant B as Bootstrap
     participant SC as ServiceContainer
-    participant SM as StreamModule
-    participant PM as PipelineModule
-    participant OM as ObservabilityModule
+    participant M as Modules
 
-    Note over B, OM: Phase 1: Registration (Building foundations)
-    B->>OM: register(SC)
-    OM->>SC: bind("trace_provider")
-    B->>SM: register(SC)
-    SM->>SC: bind("stream_reg", "catalog", "resolver")
-    B->>PM: register(SC)
-    PM->>SC: bind("engine_reg")
+    User->>FC: FlowClient(config)
+    FC->>B: initialize(config)
+    B->>SC: create()
+    
+    rect rgb(240, 240, 240)
+    Note over B, M: Phase 1: Registration
+    B->>M: register(SC)
+    M->>SC: bind foundations
+    end
 
-    Note over B, OM: Phase 2: Booting (Wiring Orchestrators)
-    B->>OM: boot(SC)
-    B->>SM: boot(SC)
-    SM->>SC: get("stream_reg", "catalog")
-    SM->>SC: bind("stream_manager")
-    B->>PM: boot(SC)
-    PM->>SC: get("stream_manager", "engine_reg")
-    PM->>SC: bind("pipeline_runner")
+    rect rgb(230, 240, 255)
+    Note over B, M: Phase 2: Booting
+    B->>M: boot(SC)
+    M->>SC: bind orchestrators
+    end
+
+    B-->>FC: ServiceContainer
+    FC-->>User: FlowClient instance
 ```
-
-### Key Rules
-- **No Phase-1 Lookups:** A module must never call `container.get()` in the `register` phase for a dependency owned by another module.
-- **Ordered Booting:** Modules are booted in the order they are defined. `PipelineModule` must come after `StreamModule` because it depends on the `StreamManager`.
-- **Single Source of Truth:** The `ServiceContainer` is the only object passed between modules.
