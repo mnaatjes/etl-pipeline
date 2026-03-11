@@ -3,7 +3,7 @@
 from typing import Dict, Type
 from src.app.ports.output.pipeline_engine import PipelineEngine
 
-class PipelineRegistry:
+class EngineRegistry:
     """
     Library for pluggable Pipeline Engines
     """

@@ -29,32 +29,32 @@ class Bootstrap:
         # TODO: Integrate a 'ConfigProvider' for YAML/ENV loading
         app_config = AppConfig(**(config_overrides or {}))
 
-        # 2. REGISTRY: Central blueprint storage for Adapters
+        # 2. REGISTRY: Central blueprint storage for Stream Adapters
         # We register 'posix' and 'file' as supported protocols for local IO.
-        registry = StreamRegistry()
+        stream_registry = StreamRegistry()
         posix_policy = PosixFilePolicy()
         
         # Governed Protocol
-        registry.register(
+        stream_registry.register(
             protocol="posix", 
             adapter_cls=PosixFileStream, 
             policy=posix_policy
         )
         
         # Direct Protocol
-        registry.register(
+        stream_registry.register(
             protocol="file",
             adapter_cls=PosixFileStream,
             policy=posix_policy
         )
 
         # HTTP Protocols
-        registry.register(
+        stream_registry.register(
             protocol="http",
             adapter_cls=HttpStream,
             policy=None
         )
-        registry.register(
+        stream_registry.register(
             protocol="https",
             adapter_cls=HttpStream,
             policy=None
@@ -73,7 +73,7 @@ class Bootstrap:
 
         factory = ResourceFactory(
             catalog=catalog,
-            registry=registry
+            registry=stream_registry
         )
 
         # 4. RESOLVER: The Waterfall Engine for settings merging
@@ -82,7 +82,7 @@ class Bootstrap:
         # 5. DEPENDENCY INJECTION: Construct the Orchestrator
         # We inject all collaborators into the StreamManager.
         return StreamManager(
-            registry=registry,
+            registry=stream_registry,
             factory=factory,
             catalog=catalog,
             app_config=app_config,

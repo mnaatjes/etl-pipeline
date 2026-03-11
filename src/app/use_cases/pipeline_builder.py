@@ -1,50 +1,42 @@
 from typing import List, Optional, Any
-from src.app.domain.models.pipeline.blueprint import PipelineBlueprint
-from src.app.domain.models.packet.payload import PayloadType
+from src.app.domain.models.packet.payload import PayloadType, PayloadSubject
 from src.app.ports.output.middleware_processor import MiddlewareProcessor
-from src.app.use_cases.manager import StreamManager
-from src.app.registry.engines import EngineRegistry
-from src.app.domain.services.traceability_provider import TraceabilityProvider
+from src.app.use_cases.pipeline_runner import PipelineRunner
 
 class PipelineBuilder:
     """
-    The 'Architect' of the Pipeline Subsystem.
+    The 'Architect' (Proxy) of the Pipeline Subsystem.
     
-    SRP: Provides a Fluent DSL for configuring, validating, and building 
-    a PipelineBlueprint. It acts as the 'Adjudicator' for type-safe 
-    middleware chains.
+    SRP: Provides a Fluent DSL for building a pipeline. It collects the 
+    user's intent (URIs and Processors) and performs 'Contract Adjudication' 
+    to ensure the middleware chain is type-safe. Once built, it proxies 
+    the execution to the PipelineRunner.
     """
     
     def __init__(
         self, 
-        manager: StreamManager, 
-        engine_registry: EngineRegistry, 
+        runner: PipelineRunner, 
         initial_source_uri: str,
-        trace_id: Optional[str] = None
+        trace_id: str
     ) -> None:
         """
-        Initializes the builder with its core dependencies.
+        Initializes the builder with its target runner and initial state.
         
-        :param manager: Injected StreamManager for resource resolution.
-        :param engine_registry: Injected Registry for execution strategies.
+        :param runner: The long-lived orchestrator in the AppContext.
         :param initial_source_uri: The starting coordinate of the data flow.
-        :param trace_id: Optional ID injected from the StreamClient session.
+        :param trace_id: Unique identifier for the pipeline session.
         """
-        self._manager = manager
-        self._engine_registry = engine_registry
+        self._runner = runner
+        self._trace_id = trace_id
         
-        # Configuration State
+        # Intent Collection State
         self._source_uris: List[str] = [initial_source_uri]
         self._sink_uris: List[str] = []
         self._processors: List[MiddlewareProcessor] = []
         
-        # Metadata & Traceability
-        # Use the provider to resolve the ID (Priority B: Context/Orchestrator ID)
-        self._trace_id: str = TraceabilityProvider.resolve(context_id=trace_id)
-        
         # Internal Adjudication State
-        # We assume initial source output is BYTES (default protocol behavior)
-        self._current_output_type: PayloadType = PayloadType.BYTES
+        # In StreamFlow, all raw source streams yield BYTES (protocol default).
+        self._current_output_type: PayloadType = PayloadSubject.BYTES
 
     # --- FLUENT CONFIGURATION METHODS ---
 
@@ -57,18 +49,20 @@ class PipelineBuilder:
         """
         Appends a transformation step and validates the contract.
         
-        Raises:
-            TypeError: If the processor's input does not match the current output.
+        This method acts as the 'Adjudicator'. It fails fast if the 
+        processor's input does not match the current stream output.
+        
+        :raises TypeError: If the pipeline contract is violated.
         """
         # 1. CONTRACT ADJUDICATION (High-Resolution Safety)
         if processor.input_subject != self._current_output_type:
             raise TypeError(
                 f"Pipeline Contract Violation! {processor.name} expects "
-                f"'{processor.input_subject.name}', but the previous step "
-                f"is yielding '{self._current_output_type.name}'."
+                f"'{processor.input_subject}', but the previous step "
+                f"is yielding '{self._current_output_type}'."
             )
 
-        # 2. Update State
+        # 2. Update State (Move the chain forward)
         self._processors.append(processor)
         self._current_output_type = processor.output_subject
         return self
@@ -82,41 +76,16 @@ class PipelineBuilder:
 
     def run(self, engine_type: str = "local", **overrides) -> None:
         """
-        The Conductor's Handover.
-        Resolves handles, constructs the Blueprint, and triggers execution.
-        """
-        # 1. FINAL INTEGRITY GUARD
-        if not self._sink_uris:
-            raise ValueError(
-                "Illegal Pipeline Operation: No destination defined. "
-                "You must call .to(uri) before calling .run()."
-            )
-
-        # 2. RESOLUTION: Promote URIs to Smart Handles via StreamManager
-        # Ensure the pipeline's trace_id is injected into every handle.
-        overrides["trace_id"] = self._trace_id
-
-        source_handles = [
-            self._manager.get_handle(uri, **overrides)
-            for uri in self._source_uris
-        ]
+        The Handover.
         
-        sink_handles = [
-            self._manager.get_handle(uri, as_sink=True, **overrides)
-            for uri in self._sink_uris
-        ]
-
-        # 3. BLUEPRINT CREATION (The 'Job Ticket')
-        blueprint = PipelineBlueprint(
-            sources=source_handles,
-            sinks=sink_handles,
-            processors=self._processors
+        Proxies the collected intent to the PipelineRunner for resolution 
+        and execution.
+        """
+        return self._runner.execute_pipeline(
+            sources=self._source_uris,
+            sinks=self._sink_uris,
+            processors=self._processors,
+            engine_type=engine_type,
+            trace_id=self._trace_id,
+            **overrides
         )
-
-        # 4. ENGINE SELECTION & EXECUTION
-        engine_cls = self._engine_registry.get_engine_cls(engine_type)
-        engine = engine_cls(trace_id=self._trace_id)
-
-        # 5. LIFECYCLE HANDSHAKE
-        with engine.setup(blueprint) as executor:
-            executor.execute()

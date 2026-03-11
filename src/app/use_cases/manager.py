@@ -11,7 +11,6 @@ from src.app.domain.models.packet import Packet
 from src.app.domain.services.resource_factory import ResourceFactory
 from src.app.domain.services.resource_catalog import ResourceCatalog
 from src.app.domain.services.settings_resolver import SettingsResolver
-from src.app.ports.output.datastream import DataStream
 from src.app.registry.streams import StreamRegistry
 from src.app.domain.services.traceability_provider import TraceabilityProvider
 
