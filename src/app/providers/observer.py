@@ -8,7 +8,7 @@ class ObserverModule(AppModule):
 
     def register(self, container: ServiceContainer) -> None:
         container.bind(
-            key="trace_provider",
+            key=TraceabilityProvider,
             instance=TraceabilityProvider()
         )
 

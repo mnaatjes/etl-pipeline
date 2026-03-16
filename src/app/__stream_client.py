@@ -1,7 +1,7 @@
 # src/app/stream_client.py
 
 from typing import Any, Optional, Dict
-
+from src.app.bootstrap import Bootstrap
 from src.app.domain.models.resource_identity import StreamLocation
 from src.app.domain.services.traceability_provider import TraceabilityProvider
 
@@ -29,7 +29,7 @@ class StreamClient:
         from src.app.bootstrap import Bootstrap
         
         # The 'Big Bang': Manager, Registry, and Resolver are wired here.
-        self._manager = Bootstrap.initialize(config_overrides=config)
+        self._manager = Bootstrap.initialize(overrides=config_bag)
 
     def get_handle(
         self, 

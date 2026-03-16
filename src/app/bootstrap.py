@@ -14,9 +14,10 @@ from src.app.providers.pipeline import PipelineModule
 
 class Bootstrap:
     """
+
     """
     @staticmethod
-    def initialize(overrides:Dict) -> ServiceContainer:
+    def initialize(overrides:Dict={}) -> ServiceContainer:
         """
         - Define list of modules
         - Registration
@@ -43,3 +44,11 @@ class Bootstrap:
 
         # Return Completed Container
         return container
+    
+    @staticmethod
+    def teardown() -> None:
+        pass
+
+    @staticmethod
+    def reinitialize() -> None:
+        pass

@@ -73,16 +73,16 @@ class StreamModule(AppModule):
         
         # Bind Foundations
         container.bind(
-            key="stream_registry",
+            key=StreamRegistry,
             instance=stream_registry
         )
         container.bind(
-            key="resource_catalog",
+            key=ResourceCatalog,
             instance=resource_catalog
         )
 
         # Bind Settings Resolver Service
-        container.bind("settings_resolver", SettingsResolver())
+        container.bind(SettingsResolver, SettingsResolver())
 
     
     def boot(self, container:ServiceContainer) -> None:
@@ -90,18 +90,18 @@ class StreamModule(AppModule):
 
         # 1. Resource Factory
         resource_factory = ResourceFactory(
-            catalog=container.get("resource_catalog"),
-            registry=container.get("stream_registry")
+            catalog=container.get(ResourceCatalog),
+            registry=container.get(StreamRegistry)
         )
 
         # 2. Instantiate and Bind StreamManager
         manager = StreamManager(
-            registry=container.get("stream_registry"),
+            registry=container.get(StreamRegistry),
             factory=resource_factory,
-            catalog=container.get("resource_catalog"),
+            catalog=container.get(ResourceCatalog),
             app_config=container.settings,
-            resolver=container.get("settings_resolver")
+            resolver=container.get(SettingsResolver)
         )
 
         # Bind StreamManager
-        container.bind("stream_manager", manager)
+        container.bind(StreamManager, manager)
