@@ -69,6 +69,9 @@ sequenceDiagram
 
 ## 4. Architectural Rules
 
-1.  **Identity is First-Class:** Every public method in `Flow` must accept an explicit `trace_id: Optional[str] = None`. It must **never** be hidden solely in a `**kwargs` bag at the entry point.
-2.  **Explicit Promotion:** Orchestrators (`StreamManager`, `PipelineRunner`) are responsible for promoting raw strings (`trace_id`) into structured Domain Objects (`StreamContext`, `PipelineBlueprint`).
-3.  **The "Bag" is for Adapters:** Only the final Infrastructure Adapters should receive a "Dense Bag" of settings. Intermediate services should use structured objects whenever possible.
+1.  **Identity is First-Class:** Every public method in `Flow` must accept an explicit `trace_id: Optional[str] = None`. This is the `method_trace` override.
+2.  **Type Enforcement:** The `trace_id` is promoted from a primitive `str` to a `TraceId` (NewType) within the `SessionContext` to prevent "Primitive Obsession."
+3.  **The "Clean Handover":** Identity (`trace_id`) and Configuration (`overrides`) must travel in the `SessionContext` object but remain segregated.
+    *   `trace_id` is used for **Identity Promotion** (creating `StreamContext`).
+    *   `overrides` is used for **Settings Resolution** (creating the dense `dict`).
+4.  **No Bag Pollution:** The `trace_id` must **never** be injected into the `overrides` dictionary. This eliminates the need for `pop()` logic in lower-level orchestrators.
