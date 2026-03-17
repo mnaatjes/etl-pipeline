@@ -1,7 +1,7 @@
 # src/app/domain/services/context_orchestrator.py
 
 # --- Models ---
-from src.app.domain.models.session_context import SessionContext
+from src.app.domain.models.session_context import SessionContext, TraceID
 from src.app.domain.models.app_config import AppConfig
 # --- Services ---
 from src.app.domain.services.settings_resolver import SettingsResolver
@@ -20,12 +20,22 @@ class ContextOrchestrator:
 
     def build_context(
             self,
-            session_trace: str,
+            session_trace: TraceID,
             method_trace: str|None=None,
             **overrides
     ) -> SessionContext:
-        """Determines identity for operation"""
-        tid = method_trace or session_trace or TraceabilityProvider.generate()
+        """
+        Determines identity for operation
+
+        :param session_trace (str) - 
+        :param method_trace (str) - Represents the 'Method-Level Override' for the trace_id
+
+        Returns
+        """
+        tid = TraceabilityProvider.resolve(
+            user_override=method_trace, 
+            context_id=session_trace
+        )
         return SessionContext(trace_id=tid, overrides=overrides)
     
     def resolve_settings(self, context: SessionContext) -> dict:

@@ -5,6 +5,7 @@ from typing import Any, Dict, Type, Union, TypeVar
 from src.app.domain.models.app_config import AppConfig
 from src.app.use_cases.manager import StreamManager
 from src.app.use_cases.pipeline_runner import PipelineRunner
+from src.app.domain.services.context_orchestrator import ContextOrchestrator
 
 # Define a Generic Type Var
 T = TypeVar("T")
@@ -38,7 +39,8 @@ class ServiceContainer:
 
     @property
     def settings(self) -> AppConfig:
-        return self._services[AppConfig]
+        # TODO: Alter Access
+        return self.get(AppConfig)
     
     @property
     def stream_manager(self) -> StreamManager:
@@ -47,3 +49,8 @@ class ServiceContainer:
     @property
     def pipeline_runner(self) -> PipelineRunner:
         return self.get(PipelineRunner)
+    
+    @property
+    def orchestrator(self) -> ContextOrchestrator:
+        """Provides the Context Orchestrator (trace_id, overrides, settings) Service"""
+        return self.get(ContextOrchestrator)

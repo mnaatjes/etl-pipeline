@@ -12,3 +12,11 @@ class ResourceIdentity(ABC):
     def key(self) -> ResourceKey:
         """The logical identifier used for cataloging and logging."""
         pass
+
+class ResourceIdentifier(ResourceIdentity):
+    """Umbrella for incoming 'Addresses' i..e Logical or Physical URIs"""
+    pass
+
+class StreamLocation(ResourceIdentity):
+    """Umbrella for final 'Physical Realities i.e. paths and urls"""
+    pass

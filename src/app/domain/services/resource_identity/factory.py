@@ -5,7 +5,7 @@ from src.app.domain.models.resource_identity import (
     PhysicalPath,
     ResourceKey
 )
-from src.app.domain.services.resource_catalog import ResourceCatalog
+from src.app.domain.services.resource_identity.catalog import ResourceCatalog
 from src.app.registry.streams import StreamRegistry
 
 class ResourceFactory:

@@ -1,7 +1,8 @@
 # src/app/providers/config.py
-from typing import NewType
 from src import __version__
 from src.app.domain.models.app_config import AppConfig
+from src.app.domain.services.context_orchestrator import ContextOrchestrator
+from src.app.domain.services.settings_resolver import SettingsResolver
 from src.app.ports.input.module import AppModule
 from src.app.container import ServiceContainer
 
@@ -10,12 +11,22 @@ class ConfigModule(AppModule):
         self.overrides = overrides
 
     def register(self, container: ServiceContainer) -> None:
-        # Instantiate raw configuration module
+        # Instantiate raw configuration dict
         config = AppConfig(**(self.overrides or {}))
         container.bind(AppConfig, config)
 
         # Bind Version type-var
         container.bind("api_version", __version__)
 
+        # Bind the Settings resolver
+        settings_resolver = SettingsResolver()
+        container.bind(SettingsResolver, settings_resolver)
+
     def boot(self, container:ServiceContainer) -> None:
-        pass
+        """Bind Major Services from Existing Container Dependencies"""
+        # Bind Context Orchestrator
+        context_service = ContextOrchestrator(
+            resolver=container.get(SettingsResolver),
+            app_config=container.get(AppConfig)
+        )
+        container.bind(ContextOrchestrator, context_service)

@@ -1,0 +1,1 @@
+# src/app/domain/services/resource_identity/__init__.py

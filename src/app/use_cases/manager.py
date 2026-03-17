@@ -6,13 +6,14 @@ from src.app.domain.models.resource_identity import StreamLocation, PhysicalPath
 from src.app.domain.models.app_config import AppConfig
 from src.app.domain.models.streams import StreamHandle, StreamContext, StreamCapacity
 from src.app.domain.models.packet import Packet
-
+from src.app.domain.models.session_context import SessionContext
 # Service/Port Imports
 from src.app.domain.services.resource_factory import ResourceFactory
 from src.app.domain.services.resource_catalog import ResourceCatalog
-from src.app.domain.services.settings_resolver import SettingsResolver
 from src.app.registry.streams import StreamRegistry
-from src.app.domain.services.traceability_provider import TraceabilityProvider
+from src.app.domain.services.context_orchestrator import ContextOrchestrator
+#from src.app.domain.services.traceability_provider import TraceabilityProvider
+#from src.app.domain.services.settings_resolver import SettingsResolver
 
 class StreamManager:
     """
@@ -26,8 +27,8 @@ class StreamManager:
         registry: StreamRegistry, 
         factory: ResourceFactory, 
         catalog: ResourceCatalog,
-        app_config: AppConfig, 
-        resolver: SettingsResolver
+        #app_config: AppConfig, 
+        orchestrator: ContextOrchestrator
     ) -> None:
         """
         :param registry: Catalog of blueprints (Adapter Classes and Policies).
@@ -39,65 +40,55 @@ class StreamManager:
         self._registry = registry
         self._factory = factory
         self._catalog = catalog
-        self._app_config = app_config
-        self._resolver = resolver
+        #self._app_config = app_config
+        self._orchestrator = orchestrator
 
     def get_handle(
         self,
         uri: str,
+        session_context: SessionContext,
         as_sink: bool = False,
-        **overrides
     ) -> StreamHandle:
         """
         Requests a Smart Handle for a resource.
         This is the primary entry point for context-aware I/O.
         """
-        # 1. CLASSIFY & RESOLVE: String -> StreamLocation
+        # 1. CLASSIFY & RESOLVE: 
+        # - String -> StreamLocation
+        # - Determine the protocol
+        # - Create blueprint
         location: StreamLocation = self._factory.build(uri)
-
-        # 2. IDENTIFY: Determine the protocol
-        protocol = self._get_protocol_for_location(location)
-
-        # 3. DISCOVER: Get the Blueprint
+        protocol  = self._get_protocol_for_location(location)
         blueprint = self._registry.get_registration(protocol)
+
+        # 2. PROMOTION: Raw Context -> Domain StreamContext
+        stream_context = StreamContext(
+            origin=uri,
+            current=str(location),
+            trace_id=session_context.trace_id
+        )
+
+        # 3. RESOLVE: Settings
+        settings = self._orchestrator.resolve_settings(context=session_context)
 
         # 4. POLICY CHECK: Contextual Guard
         if blueprint.policy:
             blueprint.policy.validate_access(location)
-        
-        # 5. CONTEXT CREATION: The Passport
-        # We generate a unique trace_id for this specific stream lifecycle.
 
-        # Catch the trace_id (if in overrides) and resolve
-        # - Prevents Adapter Pollution
-        # - Pop is safe if key not present
-        popped_trace = overrides.pop("trace_id", None)
-        trace_id = TraceabilityProvider.resolve(user_override=popped_trace)
-
-        # Form Stream Context
-        context = StreamContext(
-            origin=uri,
-            current=str(location),
-            trace_id=trace_id
-        )
-
-        # 6. CALCULATE: Settings Waterfall
-        settings = self._resolver.resolve(self._app_config, overrides)
-
-        # 7. INSTANTIATE: Context-Aware Adapter
+        # 5. INSTANTIATE: Context-Aware Adapter
         adapter = blueprint.adapter_cls(
             uri=location,
-            context=context,
+            context=stream_context,
             as_sink=as_sink,
             policy=blueprint.policy,
             **settings
         )
 
-        # 8. NEGOTIATE: Wrap in a Smart Handle
+        # 6. NEGOTIATE: Wrap in a Smart Handle
         return StreamHandle(
             adapter=adapter,
             capacity=adapter.capacity,
-            context=context
+            context=stream_context
         )
 
     # --- Private Helpers ---
