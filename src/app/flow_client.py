@@ -28,4 +28,15 @@ class Flow:
         else:
             from src.app.bootstrap import Bootstrap
             self._container = Bootstrap.initialize(overrides=config_bag)
+
+        # 3. ORCHESTRATORS
+        # - Resolve orchestrators as class properties
+        self._manager  = self._container.stream_manager
+        self._pipeline = self._container.pipeline_runner
+
+    # --- STREAM METHODS: Basic Stream Operations ---
+
+    def read(self, uri:str, **settings) -> Any:
+        """Stream Manager reads entire stream contents"""
+        
         
