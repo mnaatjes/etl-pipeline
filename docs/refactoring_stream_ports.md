@@ -69,3 +69,41 @@ flowchart TD
 2. **Domain Models & Orchestrators:** Work with `Address` until resolution is required.
 3. **Resolvers/Policies:** Accept `Address`, validate against rules, and emit `Coordinate`.
 4. **Output Ports & Adapters:** Accept **ONLY** `Coordinate`. An Adapter should never perform logical resolution or string parsing; it assumes physical reality has been verified.
+
+## 4. Refactoring the Input Port: ResourceBoundary
+
+The `ResourceBoundary` acts as the security "gatekeeper." It is responsible for ensuring that a logical intent does not escape its authorized "cage" (anchor).
+
+### Mapping to the New Identity Subsystem
+The current `ResourceBoundary` uses `LogicalURI` and `PhysicalPath`. These should be refactored to align with the `Address` and `Coordinate` types:
+
+*   **`Address` (fmr LogicalURI):** The incoming request (e.g., `registry://scans/01.xml`).
+*   **`Coordinate` (fmr PhysicalPath):** The secured, resolved physical location (e.g., `/srv/data/scans/01.xml`).
+*   **`Anchor` (Generic T):** Should be typed as a `Coordinate` representing the root of the "cage."
+
+### Proposed Refined Interface
+```python
+class ResourceBoundary(ABC):
+    @abstractmethod
+    def resolve(self, address: Address, anchor: Coordinate) -> Coordinate:
+        """
+        Translates an Address into a secured Coordinate.
+        1. Decomposes the Address.
+        2. Merges with the Anchor Coordinate.
+        3. Validates safety (no traversal).
+        """
+        pass
+
+    @abstractmethod
+    def is_safe(self, resource: Coordinate, anchor: Coordinate) -> bool:
+        """
+        Final containment check. Ensures the resource is physically 
+        under the anchor in the hierarchy.
+        """
+        pass
+```
+
+### Refactoring Rationale
+1.  **Bridging Reality:** The Boundary is the specific component that performs the mutation from `Address` (Intent) to `Coordinate` (Reality).
+2.  **Domain vs. Port Cleavage:** While the *policy* (which anchor to use) is a Domain concept, the *act of resolution and safety validation* (checking symlinks, path normalization) is an Infrastructure/Port concern because it interacts with the specific mechanics of the OS or protocol.
+3.  **Realm Specificity:** We should move toward Realm-specific boundaries (e.g., `LocalResourceBoundary`, `NetworkResourceBoundary`) rather than a single generic one. This allows the `is_safe` logic to be tailored to the medium (filesystem vs. URL paths).
