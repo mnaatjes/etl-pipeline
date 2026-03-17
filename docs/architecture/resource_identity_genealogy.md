@@ -6,40 +6,44 @@ This document codifies the class hierarchy and architectural roles within the **
 
 ## 1. Core Genealogy (Class Hierarchy)
 
-The system uses **Formal Type Inheritance** to enforce contracts, replacing the legacy `Union` type-aliasing.
+The system uses **Formal Type Inheritance** to enforce contracts, replacing the legacy `Union` type-aliasing with a Realm-based taxonomy.
 
 ```mermaid
 classDiagram
     class ResourceIdentity {
         <<Abstract>>
         +ResourceKey key
-    }
-
-    class ResourceIdentifier {
-        <<Abstract>>
+        +Realm realm
+        +str raw_value
         +str protocol
     }
 
-    class StreamLocation {
+    class Address {
         <<Abstract>>
-        +str protocol
+        +bool is_address: True
+    }
+
+    class Coordinate {
+        <<Abstract>>
+        +bool is_coordinate: True
     }
 
     %% Genealogy Hierarchy
-    ResourceIdentity <|-- ResourceIdentifier
-    ResourceIdentity <|-- StreamLocation
+    ResourceIdentity <|-- Address
+    ResourceIdentity <|-- Coordinate
 
-    %% Implementations (Addresses)
-    ResourceIdentifier <|-- LogicalURI : Address
-    
-    %% Dual-Nature (Hybrid)
-    ResourceIdentifier <|-- PhysicalURI : Address
-    StreamLocation <|-- PhysicalURI : Coordinate
-    
-    PhysicalURI <|-- RemoteURL : Specialized URI
+    %% Realm Implementations
+    Address <|-- LocalAddress
+    Address <|-- NetworkAddress
+    Address <|-- MemoryAddress
+    Address <|-- SyntheticAddress
+    Address <|-- VirtualAddress
 
-    %% Pure Coordinate
-    StreamLocation <|-- PhysicalPath : Coordinate
+    Coordinate <|-- LocalCoordinate
+    Coordinate <|-- NetworkCoordinate
+    Coordinate <|-- MemoryCoordinate
+    Coordinate <|-- SyntheticCoordinate
+    Coordinate <|-- VirtualCoordinate
 ```
 
 ---
@@ -50,33 +54,43 @@ classDiagram
 
 | Class | Role | Contract |
 | :--- | :--- | :--- |
-| **`ResourceIdentity`** | **The Root** | Every resource must provide a `ResourceKey` (Nickname/Alias). |
-| **`ResourceIdentifier`** | **The Address** | Represents an incoming "Intent" (a URI string). It must be resolvable. |
-| **`StreamLocation`** | **The Coordinate** | Represents a "Physical Reality." It must provide a `protocol` string. |
+| **`ResourceIdentity`** | **The Root** | Every resource must provide a `ResourceKey` (Nickname/Alias) and a `Realm`. |
+| **`Address`** | **The Intent** | Represents an incoming "Intent" (a URI string). It represents a reference that needs resolution. |
+| **`Coordinate`** | **The Reality** | Represents a "Physical Reality." It represents data that is physically ready for I/O. |
 
-### B. The Implementations (The "Behaviors")
+### B. The Realms (The "Taxonomy")
 
-| Class | Category | Example | Logic |
+| Realm | Description | Example Address | Example Coordinate |
 | :--- | :--- | :--- | :--- |
-| **`LogicalURI`** | Identifier | `registry://scans/` | Requires the `ResourceCatalog` to resolve to a path. |
-| **`PhysicalURI`** | Hybrid | `s3://bucket/` | Both an Identifier (Address) and a Location (Coordinate). |
-| **`RemoteURL`** | Hybrid | `https://vault.io/` | A specialized `PhysicalURI` for network transports. |
-| **`PhysicalPath`** | Location | `/srv/data/` | A local coordinate vetted by a `ResourceBoundary`. |
+| **`LOCAL`** | Local Filesystem | `posix://scans/file.csv` | `/srv/data/scans/file.csv` |
+| **`NETWORK`** | Remote/API | `https://api.io/data` | `https://api.io/data` |
+| **`MEMORY`** | In-Process RAM | `memory://cache/key` | `<memory_reference>` |
+| **`SYNTHETIC`** | Procedural | `synthetic://gen/type` | `<generator_id>` |
+| **`VIRTUAL`** | Logical/Registry | `virtual://registry/item` | `registry_path` |
 
 ---
 
-## 3. The "Dual Nature" of PhysicalURIs
+## 3. Resource Orchestrator (The Service)
 
-A key architectural feature is the **Hybrid Nature** of `PhysicalURI`. 
-- Because it contains a scheme (`s3://`, `http://`), it is a valid **Identifier** (Address). 
-- Because it is a direct coordinate, it is also a valid **StreamLocation** (Coordinate). 
+The `ResourceOrchestrator` operates as a central **Domain Service** that manages the lifecycle of a resource from string to coordinate.
 
-This allows the `ResourceOrchestrator` to skip the "Resolution" step for Physical URIs and pass them directly to the `StreamManager`.
+### Responsibilities:
+1.  **Orchestration:** Coordinates between the `ResourceFactory` (classification) and `ResourceCatalog` (resolution).
+2.  **Discovery:** Determines the protocol and appropriate realm for a given input.
+3.  **Promotion:** Elevates a raw string `uri` -> `Address` -> `Coordinate`.
+4.  **Policy Enforcement:** Interfaces with `StreamPolicy` to ensure the requested resource is accessible within the current context.
+
+### Workflow:
+1.  **Input:** User provides a string (e.g., `registry://scans/data.csv`).
+2.  **Classification:** `ResourceFactory` promotes it to a `LocalAddress`.
+3.  **Resolution:** `ResourceCatalog` resolves the `LocalAddress` (Intent) into a `LocalCoordinate` (Reality) by checking anchors and boundaries.
+4.  **Output:** A verified `Coordinate` object ready for the `StreamManager`.
 
 ---
 
 ## 4. Architectural Enforcement
 
-1.  **Contractual Inheritance:** Every implementation must inherit from its respective "Role" (Identifier or Location).
-2.  **Behavioral Validation:** The `StreamManager` must only accept objects that inherit from `StreamLocation`. This ensures the object has a `protocol` property.
+1.  **Contractual Inheritance:** Every implementation must inherit from its respective "Role" (`Address` or `Coordinate`).
+2.  **Behavioral Validation:** The `StreamManager` must only accept objects that inherit from `Coordinate`.
 3.  **No Primitive Obsession:** Raw strings must be promoted to the appropriate genealogy class before being passed between orchestrators.
+4.  **Realm Purity:** Transitions between realms (e.g., resolving a `VirtualAddress` to a `LocalCoordinate`) are explicitly managed by the `ResourceCatalog`.
