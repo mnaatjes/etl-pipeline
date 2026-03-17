@@ -103,7 +103,169 @@ class ResourceBoundary(ABC):
         pass
 ```
 
-### Refactoring Rationale
-1.  **Bridging Reality:** The Boundary is the specific component that performs the mutation from `Address` (Intent) to `Coordinate` (Reality).
-2.  **Domain vs. Port Cleavage:** While the *policy* (which anchor to use) is a Domain concept, the *act of resolution and safety validation* (checking symlinks, path normalization) is an Infrastructure/Port concern because it interacts with the specific mechanics of the OS or protocol.
-3.  **Realm Specificity:** We should move toward Realm-specific boundaries (e.g., `LocalResourceBoundary`, `NetworkResourceBoundary`) rather than a single generic one. This allows the `is_safe` logic to be tailored to the medium (filesystem vs. URL paths).
+## 5. Refactoring Resource Subsystem Services
+
+The refactoring of the Resource Subsystem involves promoting services from handling raw strings and loosely typed URIs to working with the high-fidelity `Address` and `Coordinate` models.
+
+### ResourceCatalog: The Librarian
+The `ResourceCatalog` moves from managing `LogicalURI` to governing the translation of `Address` to `Coordinate`.
+
+```python
+class ResourceCatalog:
+    def __init__(self):
+        # Maps ResourceKey (e.g. "scans") -> Anchor Coordinate
+        self._anchors: Dict[ResourceKey, Coordinate] = {}
+        self._boundaries: Dict[str, ResourceBoundary] = {}
+        self._key_protocols: Dict[ResourceKey, str] = {}
+
+    def resolve_address(self, address: Address) -> Coordinate:
+        """
+        Translates an Address into a secured, physical Coordinate.
+        """
+        key = address.key
+        protocol = self.get_protocol(key)
+        anchor = self._get_anchor(key)
+
+        boundary = self._boundaries[protocol]
+
+        # Boundary ensures the Address is resolved safely within the Anchor Coordinate
+        return boundary.resolve(address, anchor)
+```
+
+### ResourceFactory: The Classification Engine
+The `ResourceFactory` becomes the entry point for "Promoting" raw strings into domain-ready `Address` objects or direct `Coordinate` objects.
+
+```python
+class ResourceFactory:
+    def build(self, uri: str) -> Union[Address, Coordinate]:
+        """
+        Determines if a URI is a Logical Intent (Address) 
+        or a Physical Reality (Coordinate).
+        """
+        if "://" not in uri:
+            raise SecurityViolation(f"Unqualified identifier: {uri}")
+
+        # In the new model, we first create a candidate Address
+        candidate = Address.from_string(uri)
+
+        # 1. Governed Realm: registry://
+        if candidate.protocol == "registry":
+            return candidate 
+
+        # 2. Discovered Realm: If catalog knows the key
+        if self._catalog.has_resource(candidate.protocol, candidate.key):
+            return candidate
+
+        # 3. Direct Realm: If it's a known physical protocol (e.g. s3://, file://)
+        # We promote directly to a Coordinate
+        return Coordinate.from_string(uri)
+```
+
+### ResourceOrchestrator: The Subsystem Warehouse
+The `ResourceOrchestrator` coordinates the Factory, Catalog, and Policies to deliver a ready-to-use `Coordinate` and its corresponding Adapter Blueprint to the Pipeline Engine.
+
+```python
+class ResourceOrchestrator:
+    def __init__(self, factory: ResourceFactory, catalog: ResourceCatalog, registry: StreamRegistry):
+        self._factory = factory
+        self._catalog = catalog
+        self._registry = registry
+
+    def prepare_resource(self, uri: str, policy: Optional[StreamPolicy] = None) -> Tuple[Coordinate, AdapterBlueprint]:
+        """
+        The full promotion lifecycle:
+        1. String -> Address/Coordinate (via Factory)
+        2. Address -> Coordinate (via Catalog/Boundary if needed)
+        3. Blueprint Mapping: Determine the correct Adapter for the protocol.
+        4. Coordinate -> Validated Reality (via Policy)
+        """
+        item = self._factory.build(uri)
+        
+        # 1 & 2. Resolution
+        coordinate = self._catalog.resolve_address(item) if isinstance(item, Address) else item
+        
+        # 3. Blueprint Mapping
+        blueprint = self._registry.get_blueprint(coordinate.protocol)
+        
+        # 4. Policy Enforcement
+        if policy:
+            policy.validate_access(coordinate)
+            
+        return coordinate, blueprint
+```
+
+## 6. ResourceBoundary: Placement and Coupling
+
+### Where does it belong?
+The `ResourceBoundary` should remain in `src/app/ports/input/`. 
+
+**Rationale:**
+- **As a Port:** It defines a contract for security enforcement that varies by infrastructure (POSIX vs. S3 vs. HTTP). 
+- **Coupling:** It should be **tightly coupled to the Identity models** (`Address`, `Coordinate`) but **loosely coupled to the Catalog**. The Catalog *uses* the Boundary, but the Boundary should not know about the Catalog's internal registry or key-mapping logic. 
+- **Security Cleavage:** By keeping the Boundary in `ports/`, we ensure that the logic for "How do I check a symlink?" or "How do I normalize a URL path?" stays in the infrastructure layer, while the Domain simply asks for a "Safe Coordinate."
+
+## 7. Proposed Subsystem Diagrams
+
+### Flow Diagram: String to Stream
+```mermaid
+sequenceDiagram
+    participant User
+    participant Orchestrator
+    participant Factory
+    participant Catalog
+    participant Boundary
+    participant Adapter
+
+    User->>Orchestrator: promote("registry://scans/01.csv")
+    Orchestrator->>Factory: build("registry://scans/01.csv")
+    Factory-->>Orchestrator: returns Address(key="scans")
+
+    Orchestrator->>Catalog: resolve_address(Address)
+    Catalog->>Boundary: resolve(Address, Anchor)
+    Boundary-->>Catalog: returns Coordinate("/srv/data/scans/01.csv")
+    Catalog-->>Orchestrator: returns Coordinate
+
+    Orchestrator->>Orchestrator: apply StreamPolicy(Coordinate)
+
+    Orchestrator-->>User: returns Coordinate + Policy
+    User->>Adapter: open(Coordinate, Contract)
+```
+
+### Class Diagram: The Refactored Relationship
+```mermaid
+classDiagram
+    class ResourceIdentity {
+        <<abstract>>
+        +String raw_value
+        +Realm realm
+        +Protocol protocol
+    }
+    class Address {
+        +is_address: True
+    }
+    class Coordinate {
+        +is_coordinate: True
+    }
+    ResourceIdentity <|-- Address
+    ResourceIdentity <|-- Coordinate
+
+    class DataStream {
+        <<interface>>
+        +open(Coordinate, StreamContract)
+        +read()
+    }
+
+    class StreamContract {
+        <<domain model>>
+        +int chunk_size
+    }
+
+    class StreamPolicy {
+        <<domain model>>
+        +validate_access(Coordinate)
+    }
+
+    DataStream ..> Coordinate : consumes
+    DataStream ..> StreamContract : consumes
+    DataStream ..> StreamPolicy : respects
+```
