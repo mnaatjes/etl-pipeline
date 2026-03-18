@@ -50,16 +50,13 @@ from src.app.domain.models.resource_identity import Coordinate, LocalCoordinate
   - Implement the promotion logic using the new classes.
 
 ### B. Ports & Adapters
-- **`src/app/ports/input/resource_boundary.py`**
-  - Update `resolve` signature: `Address` -> `LocalCoordinate`.
+- **`src/app/ports/input/resource_boundaries/`**
+  - Refined into realm-specific ports: `LocalResourceBoundary`, `NetworkResourceBoundary`, etc.
+  - `resolve` signature updated to use realm-specific `Address` and `Coordinate`.
 - **`src/infrastructure/adapters/posix_file/boundary.py`**
-  - Update implementation to return `LocalCoordinate`.
-- **`src/app/ports/output/datastream.py`**
-  - Update `uri` property and `exists` method to use `Coordinate`.
-- **`src/infrastructure/adapters/posix_file/adapter.py`**
-  - Update type checks: `isinstance(uri, LocalCoordinate)`.
-- **`src/infrastructure/adapters/http/adapter.py`**
-  - Update type checks: `isinstance(uri, NetworkCoordinate)`.
+  - Updated implementation to inherit from `LocalResourceBoundary` and return `LocalCoordinate`.
+- **`src/infrastructure/adapters/http/boundary.py`**
+  - New implementation inheriting from `NetworkResourceBoundary`.
 
 ### C. Use Cases
 - **`src/app/use_cases/manager.py`** (StreamManager)

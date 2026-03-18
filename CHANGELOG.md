@@ -7,17 +7,27 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
-- **Realm-Based Resource Identity**: Replaced the legacy `Union` type-aliasing with a formal class hierarchy based on logical Realms (`LOCAL`, `NETWORK`, `MEMORY`, `SYNTHETIC`, `VIRTUAL`).
-- **Address & Coordinate Taxonomy**: Introduced `Address` (Intent) and `Coordinate` (Reality) as the primary abstractions for resource lifecycle management.
-- **Resource Identity Implementations**: Added specialized classes for each realm: `LocalAddress/Coordinate`, `NetworkAddress/Coordinate`, `MemoryAddress/Coordinate`, `SyntheticAddress/Coordinate`, and `VirtualAddress/Coordinate`.
-- **Refactoring Strategy**: Created a comprehensive guide (`docs/refactoring_resource_identity.md`) for migrating the codebase to the new `ResourceIdentity` subsystem.
+- **ResourceOrchestrator Facade**: Implemented a single entry point for the identity subsystem to manage the full lifecycle: *Classify -> Resolve -> Map -> Validate*.
+- **Refined ResourceBoundary Ports**: Created realm-specific input ports (`LocalResourceBoundary`, `NetworkResourceBoundary`, etc.) using the **Template Method** pattern for centralized security enforcement.
+- **HttpResourceBoundary**: Dedicated adapter for URL security, implementing host-locking and protocol consistency.
+- **As-Built Documentation**: Comprehensive "Source of Truth" guide for the identity subsystem taxonomy and genealogy (`docs/as_built/resource_identity.md`).
+- **Unified Service Exports**: Clean entry point for identity services in `src/app/domain/services/resource_identity/__init__.py`.
 
 ### Changed
-- **Genealogy Documentation**: Updated `resource_identity_genealogy.md` with the new Mermaid diagram, realm-based taxonomy, and `ResourceOrchestrator` service definition.
-- **ResourceOrchestrator Role**: Formally defined the `ResourceOrchestrator` as a Domain Service responsible for the `Address -> Coordinate` promotion.
+- **Registry-Driven Classification**: Refactored `ResourceFactory` to dynamically discover resource realms via the `StreamRegistry`, eliminating hardcoded protocol lists.
+- **Protocol-Agnostic Catalog**: Updated `ResourceCatalog` to take precedence based on resource nicknames (keys), regardless of the URI protocol used.
+- **DataStream Migration**: Updated the `DataStream` output port to strictly consume the new `Coordinate` model instead of legacy `StreamLocation`.
+- **Infrastructure Refinement**: Thin-adapter refactor for `PosixResourceBoundary`, focusing on physical path math while the Port handles domain-level sanitization.
 
 ### Fixed
-- **StreamHandle Lifecycle**: Corrected `StreamHandle.__enter__` to properly delegate to the adapter's context manager, ensuring the `is_open` flag is correctly set in the `DataStream` base class.
+- **Absolute Path Injection**: Fixed a vulnerability in `LocalResourceBoundary` where absolute paths could be injected as sub-paths.
+- **Host Redirection Hijacking**: Implemented "Authority Locking" in `NetworkResourceBoundary` to prevent unauthorized host redirection.
+- **Redundant URL Segments**: Fixed a logic error in URL joining that caused duplicated path segments (e.g., `v1/v1/`).
+- **Memory Constructor Mismatches**: Fixed argument errors in `Memory`, `Synthetic`, and `Virtual` coordinate constructors.
+
+### Removed
+- **Legacy Identity Models**: Deleted `LogicalURI`, `PhysicalPath`, and `PhysicalURI` (moved to `__resource_identity_legacy`).
+- **Hardcoded Protocols**: Removed static protocol-to-realm mappings from the domain services.
 
 ## [## [Unreleased]] - 2026-03-04
 ### Added

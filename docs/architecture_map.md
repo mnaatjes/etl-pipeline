@@ -248,7 +248,7 @@ sequenceDiagram
     rect rgb(240, 240, 240)
     Note over SM, RF: Resource Resolution Phase
     SM->>RF: build(uri)
-    RF-->>SM: StreamLocation (PhysicalPath/URI)
+    RF-->>SM: Coordinate (Local/Network/etc)
     end
 
     rect rgb(230, 240, 255)

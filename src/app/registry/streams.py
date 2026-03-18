@@ -3,20 +3,23 @@ from typing import Type, Optional
 from dataclasses import dataclass
 from src.app.ports.output.datastream import DataStream
 from src.app.ports.output.stream_policy import StreamPolicy
+from src.app.domain.models.resource_identity import Realm
 
 @dataclass(frozen=True)
 class ProtocolRegistration:
     adapter_cls: Type[DataStream]
+    realm: Realm
     policy: Optional[StreamPolicy] = None
 
 class StreamRegistry:
     def __init__(self):
         self._protocols: dict[str, ProtocolRegistration] = {}
 
-    def register(self, protocol: str, adapter_cls: Type[DataStream], policy: Optional[StreamPolicy] = None):
-        """Stores the blueprint. No settings passed here."""
+    def register(self, protocol: str, adapter_cls: Type[DataStream], realm: Realm, policy: Optional[StreamPolicy] = None):
+        """Stores the blueprint with its associated realm."""
         self._protocols[protocol] = ProtocolRegistration(
             adapter_cls=adapter_cls, 
+            realm=realm,
             policy=policy
         )
 

@@ -1,4 +1,4 @@
-# src/app/ports/input/resource_boundary.py
+# src/app/ports/input/resource_boundaries/base.py
 from abc import ABC, abstractmethod
 from typing import Generic, TypeVar
 from src.app.domain.models.resource_identity import Address, Coordinate

@@ -5,9 +5,10 @@ from src.app.domain.models.resource_identity import (
     ResourceKey,
     Address,
     Coordinate,
-    LocalCoordinate
+    LocalCoordinate,
+    Realm
 )
-from src.app.ports.input.resource_boundary import ResourceBoundary
+from src.app.ports.input.resource_boundaries import ResourceBoundary
 
 class ResourceCatalog:
     """
@@ -71,12 +72,10 @@ class ResourceCatalog:
     # --- HELPER & METADATA METHODS ---
 
     def has_resource(self, protocol:str, key:ResourceKey|str) -> bool:
-        """External Helper: Checks if protocol is registered"""
+        """External Helper: Checks if protocol or key is registered"""
         if isinstance(key, str):
             key = ResourceKey(key)
-        if not key in self._anchors:
-            return False
-        return self._get_protocol(key) == protocol
+        return key in self._anchors
 
     def _get_anchor(self, key: ResourceKey) -> Coordinate:
         """Internal Helper: Retrieves authorized Coordinate root"""
@@ -87,3 +86,7 @@ class ResourceCatalog:
     def _get_protocol(self, key: ResourceKey) -> str:
         """Internal Helper: Derives protocol from the registered anchor"""
         return self._get_anchor(key).protocol
+
+    def get_realm(self, key: ResourceKey) -> Realm:
+        """Exposes the realm of a registered anchor."""
+        return self._get_anchor(key).realm

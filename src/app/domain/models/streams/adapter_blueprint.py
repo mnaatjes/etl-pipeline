@@ -5,7 +5,7 @@ from typing import Optional, Type
 
 from src.app.ports.output.datastream import DataStream
 from src.app.ports.output.stream_policy import StreamPolicy
-from src.app.ports.input.resource_boundary import ResourceBoundary
+from src.app.ports.input.resource_boundaries import ResourceBoundary
 
 @dataclass
 class AdapterBlueprint:

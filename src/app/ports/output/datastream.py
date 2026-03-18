@@ -8,7 +8,7 @@ from src.app.domain.models.streams.stream_context import StreamContext
 from src.app.domain.models.streams.stream_capacity import StreamCapacity
 from src.app.domain.models.packet import Packet
 
-from src.app.domain.models.resource_identity import StreamLocation
+from src.app.domain.models.resource_identity import Coordinate
 
 # Create a TypeVar that represents any subclass of StreamContract
 T = TypeVar("T", bound=StreamContract)
@@ -16,7 +16,7 @@ T = TypeVar("T", bound=StreamContract)
 class DataStream(ABC, Generic[T]):
     def __init__(
             self, 
-            uri:StreamLocation,
+            uri:Coordinate,
             context:StreamContext,
             as_sink:Optional[bool] = False,
             policy:Optional[StreamPolicy] = None,
@@ -63,7 +63,7 @@ class DataStream(ABC, Generic[T]):
     # --- CONCRETE PROPERTIES ---
 
     @property
-    def uri(self) -> StreamLocation:
+    def uri(self) -> Coordinate:
         return self._uri
 
     @property
@@ -96,14 +96,14 @@ class DataStream(ABC, Generic[T]):
     
     @classmethod
     @abstractmethod
-    def exists(cls, location: StreamLocation) -> bool:
+    def exists(cls, location: Coordinate) -> bool:
         """
         PRE-FLIGHT CHECK (Class Method):
         Determines if the resource exists at the given resolved location 
         without instantiating the stream machinery.
         
         Args:
-            location (StreamLocation): A PhysicalPath or PhysicalURI.
+            location (Coordinate): A LocalCoordinate or NetworkCoordinate.
         """
         pass
 
