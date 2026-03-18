@@ -1,3 +1,4 @@
+# src/app/domain/models/resource_identity/__init__.py
 from .base import ResourceIdentity, Address, Coordinate
 from .types import ResourceKey, ParsedURI, Realm
 from .realms import (

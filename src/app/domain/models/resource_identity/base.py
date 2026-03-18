@@ -1,5 +1,6 @@
 # src/app/domain/models/resource_identity.py/base.py
 from abc import ABC, abstractmethod
+from typing import Optional
 from functools import cached_property
 from src.app.domain.models.resource_identity.types import ResourceKey, ParsedURI, Realm
 
@@ -7,13 +8,15 @@ from src.app.domain.models.resource_identity.types import ResourceKey, ParsedURI
 
 class ResourceIdentity(ABC):
 
+    def __init__(self, key: Optional[ResourceKey]) -> None:
+        # Every Identity 'can' have an optional key nickname
+        self._key = key
     # --- Abstract Properties: IDENTITY ---
 
     @property
-    @abstractmethod
     def key(self) -> ResourceKey:
         """The logical identifier used for cataloging and logging."""
-        pass
+        return self._key or ResourceKey(self.realm.value)
 
     @property
     @abstractmethod

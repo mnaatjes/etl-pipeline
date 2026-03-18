@@ -1,3 +1,4 @@
+from typing import Optional
 from src.app.domain.models.resource_identity.base import Address, Coordinate
 from src.app.domain.models.resource_identity.types import ResourceKey, Realm
 
@@ -7,6 +8,7 @@ class MemoryAddress(Address):
     - e.g. 'memory://cache/key'
     """
     def __init__(self, uri: str) -> None:
+        super().__init__(None)
         self._uri = uri
 
     @property
@@ -25,13 +27,9 @@ class MemoryCoordinate(Coordinate):
     """
     Represents the verified in-process memory REALITY
     """
-    def __init__(self, reference: str, key: ResourceKey) -> None:
+    def __init__(self, reference: str, key: Optional[ResourceKey] = None) -> None:
+        super().__init__(key)
         self._reference = reference
-        self._key = key
-
-    @property
-    def key(self) -> ResourceKey:
-        return self._key
 
     @property
     def realm(self) -> Realm:

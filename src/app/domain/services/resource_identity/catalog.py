@@ -1,15 +1,13 @@
-from typing import Dict, Any, TypeVar
+from typing import Dict
 
 # Updated Imports: Sourced from the new identity package
 from src.app.domain.models.resource_identity import (
-    ResourceKey, 
-    LogicalURI, 
-    PhysicalPath, 
-    StreamLocation
+    ResourceKey,
+    Address,
+    Coordinate,
+    LocalCoordinate
 )
 from src.app.ports.input.resource_boundary import ResourceBoundary
-
-T = TypeVar("T")
 
 class ResourceCatalog:
     """
@@ -17,74 +15,75 @@ class ResourceCatalog:
     Acts as the Librarian for the 'registry://' internal protocol.
     """
     def __init__(self):
-        # Maps ResourceKey (e.g. "scans") -> Physical Anchor (e.g. Path("/srv/data/scans"))
-        self._anchors: Dict[ResourceKey, Any] = {}
+        # PROMOTION
+        # - Anchors are now Coordinates
+        # - e.g. LocalCoordinate('tests/data/path/to/file')
+        self._anchors: Dict[ResourceKey, Coordinate] = {}
         
-        # Maps Protocol String (e.g. "posix") -> ResourceBoundary Implementation
-        self._boundaries: Dict[str, ResourceBoundary[Any]] = {}
-        
-        # Maps ResourceKey -> Protocol String
-        self._key_protocols: Dict[ResourceKey, str] = {}
+        # PROMOTION
+        # - Boundaries expect Coordinate as their scope root
+        self._boundaries: Dict[str, ResourceBoundary] = {}
 
-    def register(self, protocol: str, boundary: ResourceBoundary[Any]) -> None:
+    def register(self, protocol: str, boundary: ResourceBoundary) -> None:
         """Registers a security guard to a specific protocol."""
+        # PREVENT silent overwrites
+        if protocol in self._boundaries:
+            # STRICT: Notify protocol already registered
+            raise ValueError(f"Protocol '{protocol}' is already registered!")
+        
+        # REGISTER Resource Boundary
         self._boundaries[protocol] = boundary
 
-    def add_anchor(self, key: ResourceKey, protocol: str, anchor: Any) -> None:
+    def add_anchor(self, key: ResourceKey, anchor: Coordinate) -> None:
         """Associates a nickname (key) with a protocol and a physical root."""
+        # DERIVE the protocol from the coordinate
+        protocol = anchor.protocol
+
+        # ENFORCE protocol check
         if protocol not in self._boundaries:
-            raise ValueError(f"No Boundary registered for protocol: {protocol}")
+            raise ValueError(
+                f"Configuration Error: Cannot add anchor for '{key}' "
+                f"No Boundary registered for protocol: {protocol}"
+            )
 
+        # STORE as objects
         self._anchors[key] = anchor
-        self._key_protocols[key] = protocol
 
-    # --- Core Logic Methods ---
-
-    def resolve_uri(self, uri: LogicalURI) -> StreamLocation:
+    def resolve(self, address: Address) -> Coordinate:
         """
-        Translates a LogicalURI into a secured PhysicalPath (ValidatedPath).
+        Translates an Address (intent) into a secured Coordinate (physical reality)
         """
-        # 1. Extract Key from the Smart Value Object
-        key = ResourceKey(uri.key)
+        # IDENTIFY: Get key (e.g. "scans")
+        key = ResourceKey(address.key)
 
-        # 2. Verified Metadata Look-ups
-        protocol = self.get_protocol(key) # Promoted to public for StreamManager access
-        anchor = self._get_anchor(key)
+        # LOOKUP: Find protocol and anchor
+        # - e.g. "posix" and "/path/to/file"
+        protocol = self._get_protocol(key)
+        anchor   = self._get_anchor(key)
 
-        # 3. Delegate to Boundary for path calculation and security checks
+        # DELIGATE: Boundary Port performs security check
         boundary = self._boundaries[protocol]
-        resolved_path = boundary.resolve(uri, anchor)
 
-        # 4. BRANDING: Bind the key to the physical path before returning
-        # This satisfies the ResourceIdentity contract for ValidatedPath
-        if isinstance(resolved_path, PhysicalPath):
-            return resolved_path.bind_key(key)
+        # Return Coordinate produces by Boundary
+        return boundary.resolve(address, anchor)
 
-        return resolved_path
-    
 
     # --- HELPER & METADATA METHODS ---
 
-    def has_resource(self, protocol:str, key:ResourceKey) -> bool:
-        """
-        Checks if a ResourceKey(str) is registered under a specific protocol
-        - Used by ResourceFactory for 'Smart' Catalog-Aware resolution
-        """
-        return self._key_protocols.get(key, None) == protocol
+    def has_resource(self, protocol:str, key:ResourceKey|str) -> bool:
+        """External Helper: Checks if protocol is registered"""
+        if isinstance(key, str):
+            key = ResourceKey(key)
+        if not key in self._anchors:
+            return False
+        return self._get_protocol(key) == protocol
 
-    def get_protocol(self, key: ResourceKey) -> str:
-        """
-        Returns the protocol string associated with a key.
-        Promoted to public so the StreamManager can identify which Adapter to use.
-        """
-        protocol = self._key_protocols.get(key)
-        if not protocol:
-            raise KeyError(f"Metadata Error: Protocol for ResourceKey '{key}' not found!")
-        return protocol
+    def _get_anchor(self, key: ResourceKey) -> Coordinate:
+        """Internal Helper: Retrieves authorized Coordinate root"""
+        if key not in self._anchors:
+            raise KeyError(f"Metadata Error: Anchor for ResourceKey '{key}' NOT Found!")
+        return self._anchors[key]
 
-    def _get_anchor(self, key: ResourceKey) -> Any:
-        """Internal helper to retrieve the physical anchor."""
-        anchor = self._anchors.get(key)
-        if anchor is None:
-            raise KeyError(f"Metadata Error: Anchor for ResourceKey '{key}' not found!")
-        return anchor
+    def _get_protocol(self, key: ResourceKey) -> str:
+        """Internal Helper: Derives protocol from the registered anchor"""
+        return self._get_anchor(key).protocol

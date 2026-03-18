@@ -1,3 +1,4 @@
+from typing import Optional
 from src.app.domain.models.resource_identity.base import Address, Coordinate
 from src.app.domain.models.resource_identity.types import ResourceKey, Realm
 
@@ -7,6 +8,7 @@ class VirtualAddress(Address):
     - e.g. 'virtual://registry/item'
     """
     def __init__(self, uri: str) -> None:
+        super().__init__(None)
         self._uri = uri
 
     @property
@@ -25,13 +27,9 @@ class VirtualCoordinate(Coordinate):
     """
     Represents the verified virtual REALITY
     """
-    def __init__(self, virtual_path: str, key: ResourceKey) -> None:
+    def __init__(self, virtual_path: str, key: Optional[ResourceKey] = None) -> None:
+        super().__init__(key)
         self._virtual_path = virtual_path
-        self._key = key
-
-    @property
-    def key(self) -> ResourceKey:
-        return self._key
 
     @property
     def realm(self) -> Realm:

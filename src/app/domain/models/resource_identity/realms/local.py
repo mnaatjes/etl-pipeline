@@ -1,4 +1,4 @@
-# src/app/domain/models/resource_identity/realms/local.py
+from typing import Optional
 from src.app.domain.models.resource_identity.base import Address, Coordinate
 from src.app.domain.models.resource_identity.types import ResourceKey, Realm
 
@@ -8,6 +8,7 @@ class LocalAddress(Address):
     - e.g. 'posix://some-auth/path/to/data'
     """
     def __init__(self, uri:str) -> None:
+        super().__init__(None)
         self._uri = uri
 
     @property
@@ -27,13 +28,9 @@ class LocalCoordinate(Coordinate):
     """
     Represents the verified physical filesystem REALITY
     """
-    def __init__(self, path:str, key: ResourceKey) -> None:
+    def __init__(self, path:str, key:Optional[ResourceKey] = None) -> None:
+        super().__init__(key)
         self._path = path
-        self._key  = key
-
-    @property
-    def key(self) -> ResourceKey:
-        return self._key
     
     @property
     def realm(self) -> Realm:
