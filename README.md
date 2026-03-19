@@ -1,16 +1,18 @@
-# StreamFlow Framework
+# Slalom Framework
 
 ![Version](https://img.shields.io/badge/version-2.0.0-blue.svg)
 
 ## Design Philosophy
 
-StreamFlow is built on the principles of **Clean Architecture**, **Domain-Driven Design (DDD)**, and the **Smart Gateway** pattern. Key architectural decisions include:
+**Slalom** is a high-fidelity **Stream Orchestration Framework** built on the principles of **Clean Architecture**, **Domain-Driven Design (DDD)**, and the **Smart Gateway** pattern. 
 
-- **Hexagonal Architecture (Ports & Adapters):** Core logic is completely decoupled from infrastructure (filesystems, APIs). This allows for protocol-agnostic stream operations.
+Key architectural decisions include:
+
+- **Hexagonal Architecture (Ports & Adapters):** Core logic is completely decoupled from infrastructure. This allows for protocol-agnostic stream operations.
 - **Smart Gateway Pattern:** The framework acts as an intelligent mediator. It doesn't just pass bytes; it negotiates **Capabilities**, injects **Context**, and enforces **Security Boundaries**.
-- **High-Resolution Identity:** Resources are resolved into **Smart Value Objects** that carry physical coordinates, lineage, and security metadata.
-- **Context-Aware Observability:** Every data unit (**Packet**) is stamped with a **StreamContext** (Passport) containing a unique `trace_id`, enabling end-to-end observability.
-- **Composition Root:** Dependency injection is centralized in the `Bootstrap` layer, ensuring the system is 100% testable without complex mocking.
+- **High-Resolution Identity:** Resources are resolved into **Smart Value Objects** (Coordinates) that carry physical coordinates, lineage, and security metadata.
+- **Context-Aware Observability:** Every data unit (**Packet**) is stamped with a **SessionContext** (Passport) containing a unique `trace_id`, enabling end-to-end observability.
+- **Composition Root:** Dependency injection is centralized in specialized **Providers**, ensuring the system is 100% testable and modular.
 
 ## Directory Structure
 
@@ -19,17 +21,16 @@ src/
 ├── app/                        # The Composition Root & Facade
 │   ├── domain/                 # Core Domain Models & Services
 │   │   ├── models/             
-│   │   │   ├── packet/         # The Self-Aware Unit of Work (Packet, FlowSignal)
-│   │   │   ├── streams/        # Smart Resource Models (Handle, Capacity, Context)
-│   │   │   └── resource_identity/ # Identity Objects (LogicalURI, PhysicalPath)
-│   │   └── services/           # Logic (Catalog, Factory, Resolver)
+│   │   │   ├── packet/         # The Self-Aware Unit of Work (Packet)
+│   │   │   ├── streams/        # Smart Resource Models (Handle, Capacity)
+│   │   │   └── resource_identity/ # Identity Objects (Address, Coordinate)
+│   │   └── services/           # Logic (ResourceManager, SessionManager)
 │   ├── ports/                  # Interfaces (Input/Output Boundaries)
-│   ├── registry/               # Adapter Blueprints
+│   ├── providers/              # Dependency Injection Modules
 │   ├── use_cases/              # Orchestration (StreamManager)
-│   ├── bootstrap.py            # Dependency Injection & Wiring
-│   └── stream_client.py        # Public Facade
-└── infrastructure/             # Concrete Implementations
-    └── adapters/               # Protocol Adapters (POSIX, HTTP)
+│   ├── bootstrap.py            # Composition Root (Wiring)
+│   └── gateway.py              # The Smart Gateway (Entry Point)
+└── infrastructure/             # Concrete Implementations (Adapters)
 ```
 
 ## Getting Started
@@ -38,124 +39,67 @@ src/
 Ensure `src/` is in your `PYTHONPATH`.
 
 ### Basic Usage
-The `StreamClient` is the primary entry point for all operations.
+The `Gateway` is the primary entry point for all operations.
 
 ```python
-from src.app import StreamClient
+from src.app import Gateway
 
-# 1. Initialize the client
-client = StreamClient()
+# 1. Initialize the Gateway (The Course)
+slalom = Gateway()
 
-# 2. Request a Smart Handle (The dashboard for your resource)
-handle = client.get_handle("posix://data/input.txt", read_mode="lines")
+# 2. Request a Smart Handle (The Dashboard for your resource)
+handle = slalom.get_handle("posix://data/input.txt")
 
 # 3. Use Introspection (Ask what is possible)
 if handle.capacity.can_seek:
     print("This stream supports random access!")
 
-# 4. Read Self-Aware Packets
+# 4. Read Traceable Packets
 with handle as stream:
     for packet in stream.read():
+        # Each packet slaloms through the gateway with its Passport
         print(f"[{packet.context.trace_id}] Payload: {packet.payload}")
-
-# 5. Write content
-client.write("posix://logs/app.log", b"Operation successful")
 ```
 
 ## Core Methods
 
 ### `get_handle(uri, as_sink=False, **overrides)`
-Returns a `StreamHandle` instance. This is the **Smart Gateway** entry point.
-- Provides access to `capacity` (introspection).
-- Manages stream lifecycle via context manager.
-- Yields traceable `Packet` objects.
+Returns a `StreamHandle`. This is the **Smart Gateway** entry point for managed I/O.
 
 ### `read(uri)`
-Convenience method to read all content from a URI. Returns an iterator of `Packet` objects.
+Convenience method to read all content from a URI. Returns an iterator of traceable `Packet` objects.
 
 ### `write(uri, data)`
-Convenience method to write data to a URI. Automatically wraps data in a traceable `Packet`.
+Convenience method to write data to a URI. Automatically stamps the data with the gateway context.
 
-### `exists(uri)`
-Checks if a resource exists at the given URI without opening a stream.
-
-### `resolve(uri)`
-Exposes the internal resolution logic, returning the physical `Path` or `URL`.
-
-## Resource Access Modes
-
-### 1. Catalog-Aware Access (`posix://`, `s3://`, etc.)
-The framework is **Polite**. If you register a key in the catalog, you can access it using its protocol scheme directly.
-
-**Registration:**
-```python
-client.add_resource(key="vault", protocol="posix", anchor="/var/lib/data")
-```
-
-**Intuitive Usage:**
-```python
-# Automatically resolves to /var/lib/data/reports/2026.csv
-client.read("posix://vault/reports/2026.csv")
-```
-
-### 2. Mandatory Identity (`registry://`)
-Standard internal resolution. Always safe, always governed by boundaries.
-```python
-client.read("registry://vault/config.json")
-```
-
-### 3. Direct Access (`file://`, `https://`)
-Direct physical access bypassing the catalog. Subject to the **Protocol Safelist** firewall.
-
----
-
-## Observability & Introspection
-
-### StreamContext (The Passport)
-Every stream generates a unique `trace_id`. Every `Packet` produced by that stream carries this context, allowing you to trace a single piece of data through multiple middleware processors.
-
-### StreamCapacity (The Dashboard)
-Adapters declare their capabilities upfront:
-- `can_seek`: Can the stream move to an offset?
-- `is_writable`: Does the resource support writing?
-- `is_network`: Is this a remote resource?
-
-## Supported Adapters
-
-| Protocol | Adapter | Capabilities |
-| :--- | :--- | :--- |
-| `posix` / `file` | `PosixFileStream` | Seekable, Writable, Local |
-| `http` / `https` | `HttpStream` | Sequential, Read-Only, Network |
+### `add_resource(key, protocol, anchor)`
+Registers a physical anchor (e.g., a folder or API base) in the **Resource Catalog**.
 
 ---
 
 ## Documentation Architecture
 
-The project maintains a structured documentation suite organized by **Permanence** and **Intent**.
+The Slalom project maintains a structured documentation suite organized by **Permanence** and **Intent**.
 
 ```text
 docs/
 ├── architecture/           # The "Source of Truth" (System as it exists)
 │   ├── standards/          # Engineering standards & patterns
-│   └── map.md              # High-level system topology
+│   └── README.md           # Master System Topology & Diagrams
 ├── design/                 # "Living" documents for active work
 │   ├── plans/              # Execution roadmaps (Refactors, Features)
 │   └── proposals/          # RFCs and design specifications
 ├── examples/               # Developer Experience (Usage & Tutorials)
 │   ├── session_context.md  # How to use Traceability & Settings
-│   └── stream_client.md    # Getting started with the Client
+│   └── stream_client.md    # Getting started with the Gateway
 └── status_reports/         # Historical snapshots of project progress
 ```
 
 ### 1. Architecture (`docs/architecture/`)
-Contains the structural specification of the framework. This is the **internal** guide for maintainers, covering security boundaries, data models, and the "Smart Gateway" logic.
+The **internal** guide for maintainers, covering security boundaries, data models, and the "Smart Gateway" logic.
 
 ### 2. Design (`docs/design/`)
-A workspace for evolution. **Proposals** are RFCs for future work, while **Plans** are active execution roadmaps for the current sprint.
+A workspace for evolution. **Proposals** are RFCs for future work, while **Plans** are active execution roadmaps.
 
 ### 3. Examples (`docs/examples/`)
-The **external** developer guide. If you need to know how to implement a specific use case or use a new feature, start here.
-
-### 4. Status Reports (`docs/status_reports/`)
-Timestamped summaries of subsystem milestones and integration status.
-
+The **external** developer guide. If you need to know how to implement a specific use case, start here.
