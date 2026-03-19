@@ -1,12 +1,12 @@
 # src/__init__.py
 
-# v1.0.0 - 03/03/2026: Framework completed
+# v0.1.0 - 03/03/2026: Initial development / Proto-framework
 
 """
-version: X.Y.Z (v1.0.0)
-X	Major	Breaking Changes: When you change or remove code that makes the framework incompatible with previous versions.
-Y	Minor	New Features: When you add functionality in a backwards-compatible manner.
-Z	Patch	Bug Fixes: For backwards-compatible bug fixes or internal refactoring that doesn't change behavior.
+version: X.Y.Z
+X	Major	Public API defined (v1.0.0+)
+Y	Minor	Initial development / Alpha (v0.x.x)
+Z	Patch	Bug Fixes / Refactors
 """
 
-__version__ = "2.0.0"
+__version__ = "0.9.0"
