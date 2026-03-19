@@ -1,8 +1,7 @@
 # src/app/providers/config.py
 from src import __version__
 from src.app.domain.models.app_config import AppConfig
-from src.app.domain.services.context_orchestrator import ContextOrchestrator
-from src.app.domain.services.settings_resolver import SettingsResolver
+from src.app.domain.services.session_context import SessionManager, SettingsResolver
 from src.app.ports.input.module import AppModule
 from src.app.container import ServiceContainer
 
@@ -24,9 +23,9 @@ class ConfigModule(AppModule):
 
     def boot(self, container:ServiceContainer) -> None:
         """Bind Major Services from Existing Container Dependencies"""
-        # Bind Context Orchestrator
-        context_service = ContextOrchestrator(
+        # Bind Session Manager
+        session_service = SessionManager(
             resolver=container.get(SettingsResolver),
             app_config=container.get(AppConfig)
         )
-        container.bind(ContextOrchestrator, context_service)
+        container.bind(SessionManager, session_service)

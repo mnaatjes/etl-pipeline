@@ -1,12 +1,12 @@
-# src/app/domain/services/resource_identity/orchestrator.py
+# src/app/domain/services/resource_identity/manager.py
 from src.app.domain.models.resource_identity import Coordinate
 from src.app.domain.services.resource_identity.factory import ResourceFactory
 from src.app.domain.services.resource_identity.catalog import ResourceCatalog
 from src.app.registry.streams import StreamRegistry, ProtocolRegistration
 
-class ResourceOrchestrator:
+class ResourceManager:
     """
-    The Facade Orchestrator for the Resource Identity Subsystem.
+    The Facade for the Resource Identity Subsystem.
     
     Responsibilities:
     - Promotion: String URI --> Coordinate (via ResourceFactory)

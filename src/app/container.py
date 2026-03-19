@@ -5,7 +5,8 @@ from typing import Any, Dict, Type, Union, TypeVar
 from src.app.domain.models.app_config import AppConfig
 from src.app.use_cases.manager import StreamManager
 from src.app.use_cases.pipeline_runner import PipelineRunner
-from src.app.domain.services.context_orchestrator import ContextOrchestrator
+from src.app.domain.services.session_context import SessionManager
+from src.app.domain.services.resource_identity import ResourceManager
 
 # Define a Generic Type Var
 T = TypeVar("T")
@@ -51,6 +52,11 @@ class ServiceContainer:
         return self.get(PipelineRunner)
     
     @property
-    def orchestrator(self) -> ContextOrchestrator:
-        """Provides the Context Orchestrator (trace_id, overrides, settings) Service"""
-        return self.get(ContextOrchestrator)
+    def session_manager(self) -> SessionManager:
+        """Provides the Session Manager (trace_id, overrides, settings) Service"""
+        return self.get(SessionManager)
+
+    @property
+    def resource_manager(self) -> ResourceManager:
+        """Provides the Resource Manager (Identity, Resolution) Service"""
+        return self.get(ResourceManager)

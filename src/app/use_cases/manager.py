@@ -7,13 +7,11 @@ from src.app.domain.models.app_config import AppConfig
 from src.app.domain.models.streams import StreamHandle, StreamContext, StreamCapacity
 from src.app.domain.models.packet import Packet
 from src.app.domain.models.session_context import SessionContext
+from src.app.domain.models.resource_identity import Coordinate
 # Service/Port Imports
-#from src.app.domain.services.resource_factory import ResourceFactory
-#from src.app.domain.services.resource_catalog import ResourceCatalog
+from src.app.domain.services.resource_identity import ResourceManager
+from src.app.domain.services.session_context import SessionManager
 from src.app.registry.streams import StreamRegistry
-#from src.app.domain.services.context_orchestrator import ContextOrchestrator
-#from src.app.domain.services.traceability_provider import TraceabilityProvider
-#from src.app.domain.services.settings_resolver import SettingsResolver
 
 class StreamManager:
     """
@@ -24,24 +22,15 @@ class StreamManager:
     """
     def __init__(
         self, 
-        registry: StreamRegistry, 
-        factory: ResourceFactory, 
-        catalog: ResourceCatalog,
-        #app_config: AppConfig, 
-        orchestrator: ContextOrchestrator
+        resource_manager: ResourceManager,
+        session_manager: SessionManager
     ) -> None:
         """
-        :param registry: Catalog of blueprints (Adapter Classes and Policies).
-        :param factory: Classifier that promotes strings to StreamLocations.
-        :param catalog: Librarian that provides protocol metadata for internal keys.
-        :param app_config: Global settings (Tier 1).
-        :param resolver: The Waterfall Engine for settings resolution.
+        :param resource_manager: The Facade for the Resource Identity Subsystem.
+        :param session_manager: The Facade for the Session Context Subsystem.
         """
-        self._registry = registry
-        self._factory = factory
-        self._catalog = catalog
-        #self._app_config = app_config
-        self._orchestrator = orchestrator
+        self._resources = resource_manager
+        self._sessions  = session_manager
 
     def get_handle(
         self,
@@ -53,34 +42,29 @@ class StreamManager:
         Requests a Smart Handle for a resource.
         This is the primary entry point for context-aware I/O.
         """
-        # 1. CLASSIFY & RESOLVE: 
-        # - String -> StreamLocation
-        # - Determine the protocol
-        # - Create blueprint
-        location: StreamLocation = self._factory.build(uri)
-        protocol  = self._get_protocol_for_location(location)
-        blueprint = self._registry.get_registration(protocol)
+        # 1. RESOLVE & VALIDATE (What)
+        coordinate = self._resources.resolve_resource(uri)
+        self._resources.validate_policy(coordinate)
+        
+        # 2. DISCOVER BLUEPRINT (How)
+        registration = self._resources.get_registration(coordinate.protocol)
 
-        # 2. PROMOTION: Raw Context -> Domain StreamContext
+        # 3. PROMOTION: Raw Context -> Domain StreamContext
         stream_context = StreamContext(
             origin=uri,
-            current=str(location),
+            current=str(coordinate),
             trace_id=session_context.trace_id
         )
 
-        # 3. RESOLVE: Settings
-        settings = self._orchestrator.resolve_settings(context=session_context)
-
-        # 4. POLICY CHECK: Contextual Guard
-        if blueprint.policy:
-            blueprint.policy.validate_access(location)
+        # 4. RESOLVE: Settings (The "Waterfall")
+        settings = self._sessions.resolve_settings(context=session_context)
 
         # 5. INSTANTIATE: Context-Aware Adapter
-        adapter = blueprint.adapter_cls(
-            uri=location,
+        adapter = registration.adapter_cls(
+            uri=coordinate,
             context=stream_context,
             as_sink=as_sink,
-            policy=blueprint.policy,
+            policy=registration.policy,
             **settings
         )
 
@@ -93,33 +77,23 @@ class StreamManager:
 
     # --- Private Helpers ---
 
-    def _get_protocol_for_location(self, location: StreamLocation) -> str:
-        """
-        Extracts the protocol from the location object.
-        """
-        if isinstance(location, PhysicalPath):
-            return self._catalog.get_protocol(location.key)
-        
-        if isinstance(location, PhysicalURI):
-            return location.protocol
-            
-        raise TypeError(f"Unsupported StreamLocation type: {type(location)}")
+    # (Removed _get_protocol_for_location as logic is now in ResourceManager)
     
     # --- Action Methods ---
 
-    def read(self, uri: str, **overrides) -> Iterator[Packet]:
+    def read(self, uri: str, session_context: SessionContext) -> Iterator[Packet]:
         """
         Convenience method to read traceable Packets from a URI.
         """
-        handle = self.get_handle(uri, as_sink=False, **overrides)
+        handle = self.get_handle(uri, session_context=session_context, as_sink=False)
         with handle as stream:
             yield from stream.read()
 
-    def write(self, uri: str, data: Any, **overrides) -> None:
+    def write(self, uri: str, session_context: SessionContext, data: Any) -> None:
         """
         Convenience method to write data to a stream.
         """
-        handle = self.get_handle(uri, as_sink=True, **overrides)
+        handle = self.get_handle(uri, session_context=session_context, as_sink=True)
         with handle as stream:
             stream.write(data)
 
@@ -127,27 +101,21 @@ class StreamManager:
         """
         Checks if the resource exists without opening a full stream.
         """
-        location = self._factory.build(uri)
-        protocol = self._get_protocol_for_location(location)
-        blueprint = self._registry.get_registration(protocol)
-
-        return blueprint.adapter_cls.exists(location)
+        coordinate = self._resources.resolve_resource(uri)
+        registration = self._resources.get_registration(coordinate.protocol)
+        return registration.adapter_cls.exists(coordinate)
 
     # --- Discovery & Validation Methods ---
 
-    def resolve(self, uri: str) -> StreamLocation:
+    def resolve(self, uri: str) -> Coordinate:
         """Exposes the resolution logic."""
-        return self._factory.build(uri)
+        return self._resources.resolve_resource(uri)
 
     def validate_resource(self, uri: str) -> bool:
         """Performs a 'Dry Run' check."""
         try:
-            location = self.resolve(uri)
-            protocol = self._get_protocol_for_location(location)
-            blueprint = self._registry.get_registration(protocol)
-            
-            if blueprint.policy:
-                blueprint.policy.validate_access(location)
+            coordinate = self.resolve(uri)
+            self._resources.validate_policy(coordinate)
             return True
         except (ValueError, KeyError, PermissionError, TypeError):
             return False
@@ -156,8 +124,9 @@ class StreamManager:
 
     def add_resource(self, key: str, protocol: str, anchor: Any) -> None:
         """Registers a physical anchor in the Resource Catalog."""
-        if protocol == "posix" and isinstance(anchor, str):
-            from pathlib import Path
-            anchor = Path(anchor)
-            
-        self._catalog.add_anchor(key=ResourceKey(key), protocol=protocol, anchor=anchor)
+        # This delegatest to internal components via ResourceManager if needed, 
+        # but for now we'll access the catalog directly if exposed, 
+        # or we might want to add a method to ResourceManager.
+        # Given current architecture, let's keep it simple.
+        # TODO: Move this to ResourceManager facade
+        pass

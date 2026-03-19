@@ -1,13 +1,13 @@
-# src/app/domain/services/context_orchestrator.py
+# src/app/domain/services/session_context/manager.py
 
 # --- Models ---
 from src.app.domain.models.session_context import SessionContext, TraceID
 from src.app.domain.models.app_config import AppConfig
 # --- Services ---
-from src.app.domain.services.settings_resolver import SettingsResolver
-from src.app.domain.services.traceability_provider import TraceabilityProvider
+from src.app.domain.services.session_context.settings_resolver import SettingsResolver
+from src.app.domain.services.session_context.traceability_provider import TraceabilityProvider
 
-class ContextOrchestrator:
+class SessionManager:
 
     def __init__(
             self,

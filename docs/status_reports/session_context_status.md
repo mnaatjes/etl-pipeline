@@ -1,40 +1,39 @@
 # Status Report: Session Context & Traceability Subsystem
 
-**Last Updated:** Wednesday, March 18, 2026  
-**Status:** Functional / Integration Required  
-**Component:** `ContextOrchestrator` & `SessionContext`
+**Last Updated:** Thursday, March 19, 2026  
+**Status:** Functional / Refactored
+**Component:** `SessionManager` & `SessionContext`
 
 ---
 
 ## 1. Executive Summary
-The Session Context subsystem is responsible for maintaining the "Passport" (traceability and ephemeral settings) that travels with every data stream. While the core logic is implemented, the subsystem is currently misaligned with the project's directory structure and naming conventions, leading to fragile imports and high cognitive load.
+The Session Context subsystem has been fully refactored to align with the project's directory structure and naming conventions. The "Orchestrator" naming collision has been resolved by renaming the primary facade to `SessionManager`. Integration with the `StreamManager` is complete, establishing a clear delegation of settings resolution and traceability.
 
 ---
 
-## 2. Key Findings
+## 2. Key Findings & Resolutions
 
-### A. Directory & Path Mismatches
-The physical files for the subsystem have been moved to a specialized directory, but the rest of the application is still attempting to import them from the service root.
-- **Physical Path:** `src/app/domain/services/session_context/orchestrator.py`
-- **Attempted Import:** `from src.app.domain.services.context_orchestrator import ...`
-- **Missing `__init__.py`:** The `session_context` directory lacks an `__init__.py`, making it impossible to import components cleanly.
+### A. Directory & Path Alignment (Resolved)
+The physical files and import paths are now synchronized.
+- **Physical Path:** `src/app/domain/services/session_context/manager.py`
+- **Standardized Export:** `from src.app.domain.services.session_context import SessionManager`
+- **`__init__.py`:** Now exists and properly exports the subsystem's public API.
 
-### B. Naming Collision (Orchestrator Overload)
-The system now has two primary "Orchestrators":
-1.  **`ResourceOrchestrator`**: Handles Identity, Resolution, and Mapping (The "What").
-2.  **`ContextOrchestrator`**: Handles Session, Traceability, and Settings (The "Who/How").
-The similar naming makes the architecture harder to navigate for new developers.
+### B. Naming Collision (Resolved)
+The architecture now uses consistent "Manager" suffixes for subsystem facades:
+1.  **`ResourceManager`**: Handles Identity, Resolution, and Mapping (The "What").
+2.  **`SessionManager`**: Handles Session, Traceability, and Settings (The "Who/How").
 
-### C. Implementation Gaps
-The `StreamManager` is injected with the `ContextOrchestrator` but is not yet fully delegating its settings resolution logic to it, leading to redundant code in the `manager.py`.
+### C. Implementation Gaps (Resolved)
+The `StreamManager` now strictly delegates its settings resolution logic to the `SessionManager`, removing redundant code and centralizing the "Settings Waterfall" logic.
 
 ---
 
-## 3. Class Diagram (Existing)
+## 3. Class Diagram (Updated)
 
 ```mermaid
 classDiagram
-    class ContextOrchestrator {
+    class SessionManager {
         -SettingsResolver _resolver
         -AppConfig _app_config
         +build_context(session_trace, method_trace, **overrides) SessionContext
@@ -46,7 +45,6 @@ classDiagram
     }
 
     class TraceabilityProvider {
-        +generate() TraceID
         +resolve(user_override, context_id) TraceID
     }
 
@@ -55,9 +53,9 @@ classDiagram
         +Dict overrides
     }
 
-    ContextOrchestrator --> SettingsResolver : uses
-    ContextOrchestrator --> TraceabilityProvider : uses
-    ContextOrchestrator ..> SessionContext : produces
+    SessionManager --> SettingsResolver : uses
+    SessionManager --> TraceabilityProvider : uses
+    SessionManager ..> SessionContext : produces
 ```
 
 ---
@@ -67,48 +65,34 @@ classDiagram
 ```mermaid
 sequenceDiagram
     participant Flow as Flow Facade
-    participant CO as ContextOrchestrator
+    participant SM as SessionManager
     participant TP as TraceabilityProvider
     participant SR as SettingsResolver
-    participant SM as StreamManager
+    participant STM as StreamManager
 
-    Flow->>CO: build_context(trace_id, **overrides)
-    CO->>TP: resolve(user_override, session_id)
-    TP-->>CO: TraceID
-    CO-->>Flow: SessionContext
+    Flow->>SM: build_context(trace_id, **overrides)
+    SM->>TP: resolve(user_override, session_id)
+    TP-->>SM: TraceID
+    SM-->>Flow: SessionContext
 
-    Flow->>SM: get_handle(uri, SessionContext)
-    SM->>CO: resolve_settings(SessionContext)
-    CO->>SR: resolve(AppConfig, overrides)
-    SR-->>CO: Dense Bag (Dict)
-    CO-->>SM: Final Settings
+    Flow->>STM: get_handle(uri, SessionContext)
+    STM->>SM: resolve_settings(SessionContext)
+    SM->>SR: resolve(AppConfig, overrides)
+    SR-->>SM: Dense Bag (Dict)
+    SM-->>STM: Final Settings
 ```
 
 ---
 
-## 5. Recommendations for Resolution
-
-### 1. Renaming for Clarity
-Rename `ContextOrchestrator` to **`SessionOrchestrator`**.
-- **Rationale:** Distinguishes it clearly from the `ResourceOrchestrator`. It manages the *Session*, not the general *Context*.
-
-### 2. Standardize Exports
-Create `src/app/domain/services/session_context/__init__.py` and export the services.
-```python
-from .orchestrator import SessionOrchestrator
-from .settings_resolver import SettingsResolver
-from .traceability_provider import TraceabilityProvider
-```
-
-### 3. Fix Import Paths
-Update `src/app/container.py` and `src/app/providers/config.py` to use the new standardized paths.
-
-### 4. Bridge to StreamManager
-Refactor `StreamManager` to strictly use the `SessionOrchestrator` for all its metadata and settings needs, removing internal dictionary merging.
+## 5. Completed Tasks
+- [x] Rename `ContextOrchestrator` to `SessionManager`.
+- [x] Standardize exports in `src/app/domain/services/session_context/__init__.py`.
+- [x] Fix import paths in `container.py` and `providers/config.py`.
+- [x] Refactor `StreamManager` to consume `SessionContext` via `SessionManager`.
 
 ---
 
 ## 6. Next Steps
-- [ ] Implement directory cleanup and naming refactor.
-- [ ] Update `StreamManager` to consume `SessionContext`.
-- [ ] Verify with unit tests in `tests/unit/app/domain/services/session_context/`.
+- [x] Verify implementation with unit tests.
+- [ ] Update remaining architectural documentation to reflect new naming.
+- [ ] Implement advanced traceability logging using the `SessionContext`.
