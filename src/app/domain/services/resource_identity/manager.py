@@ -58,6 +58,24 @@ class ResourceManager:
         """
         return coordinate.protocol
 
+    # --- Configuration Methods ---
+
+    def add_anchor(self, key: str, anchor: Coordinate) -> None:
+        """
+        Registers a physical root (anchor) in the Resource Catalog.
+        
+        :param key: The nickname/alias (e.g., 'scans').
+        :param anchor: The physical root Coordinate.
+        """
+        from src.app.domain.models.resource_identity import ResourceKey
+        self._catalog.add_anchor(key=ResourceKey(key), anchor=anchor)
+
+    def register_boundary(self, protocol: str, boundary: any) -> None:
+        """
+        Registers a security boundary for a specific protocol.
+        """
+        self._catalog.register(protocol=protocol, boundary=boundary)
+
     # --- Discovery Helpers ---
 
     def is_supported(self, uri: str) -> bool:

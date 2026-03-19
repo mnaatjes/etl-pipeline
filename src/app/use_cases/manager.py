@@ -123,10 +123,23 @@ class StreamManager:
     # --- Configuration Methods ---
 
     def add_resource(self, key: str, protocol: str, anchor: Any) -> None:
-        """Registers a physical anchor in the Resource Catalog."""
-        # This delegatest to internal components via ResourceManager if needed, 
-        # but for now we'll access the catalog directly if exposed, 
-        # or we might want to add a method to ResourceManager.
-        # Given current architecture, let's keep it simple.
-        # TODO: Move this to ResourceManager facade
-        pass
+        """
+        Registers a physical anchor in the Resource Catalog.
+        
+        :param key: The nickname/alias (e.g., 'scans').
+        :param protocol: The implementation protocol (e.g., 'posix', 'http').
+        :param anchor: The physical root (Path, URL, or raw string).
+        """
+        # 1. Promote raw anchor to a Coordinate
+        # We use the internal factory logic or manual instantiation based on protocol
+        from src.app.domain.models.resource_identity import LocalCoordinate, NetworkCoordinate
+        
+        if protocol in ["posix", "file"]:
+            coordinate = LocalCoordinate(path=str(anchor))
+        elif protocol in ["http", "https"]:
+            coordinate = NetworkCoordinate(url=str(anchor))
+        else:
+            raise ValueError(f"Unsupported protocol for manual registration: {protocol}")
+
+        # 2. Delegate to the Resource Facade
+        self._resources.add_anchor(key=key, anchor=coordinate)

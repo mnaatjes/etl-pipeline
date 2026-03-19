@@ -65,8 +65,3 @@ class Bootstrap:
         
         # Clear module tracking
         cls._modules = []
-
-    @staticmethod
-    def reinitialize() -> None:
-        """Deprecated: Use teardown + initialize instead."""
-        pass
