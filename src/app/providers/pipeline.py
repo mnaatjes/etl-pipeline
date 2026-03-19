@@ -2,27 +2,31 @@
 
 from src.app.ports.input.module import AppModule
 from src.app.container import ServiceContainer
+
+# Registries & Use Cases
 from src.app.registry.engines import EngineRegistry
 from src.app.use_cases.pipeline_runner import PipelineRunner
 from src.app.use_cases.manager import StreamManager
 
 class PipelineModule(AppModule):
-
+    """
+    Workflow Provider: Responsible for the "Engine" (PipelineRunner).
+    """
     def register(self, container: ServiceContainer) -> None:
-        # Register Pipeline Runner Dependencies
-        container.bind(
-            key=EngineRegistry,
-            instance=EngineRegistry()
-        )
+        """Phase 1: Foundation (Engine Registry)"""
+        # 1. Instantiate and bind the EngineRegistry
+        container.bind(EngineRegistry, EngineRegistry())
 
     def boot(self, container: ServiceContainer) -> None:
-        # Init the pipeline runner and bind to container
+        """Phase 2: Orchestration (PipelineRunner)"""
+        # 1. Instantiate and bind the PipelineRunner
+        # Note: Depends on the StreamManager
         runner = PipelineRunner(
             manager=container.get(StreamManager),
             engine_registry=container.get(EngineRegistry)
         )
+        container.bind(PipelineRunner, runner)
 
-        container.bind(
-            key=PipelineRunner,
-            instance=runner
-        )
+    def teardown(self, container: ServiceContainer) -> None:
+        """Stop any active pipeline engines."""
+        pass

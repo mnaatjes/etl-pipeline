@@ -1,16 +1,21 @@
-#
+# src/app/providers/observer.py
 
 from src.app.ports.input.module import AppModule
 from src.app.container import ServiceContainer
-from src.app.domain.services.traceability_provider import TraceabilityProvider
 
 class ObserverModule(AppModule):
-
+    """
+    Reserved for future implementation of:
+    - Event Bus / Notifications
+    - Telemetry / Logging Adapters
+    - Stream Observation Hooks
+    """
     def register(self, container: ServiceContainer) -> None:
-        container.bind(
-            key=TraceabilityProvider,
-            instance=TraceabilityProvider()
-        )
+        pass
 
     def boot(self, container: ServiceContainer) -> None:
+        pass
+
+    def teardown(self, container: ServiceContainer) -> None:
+        """Unregister listeners or observers."""
         pass
