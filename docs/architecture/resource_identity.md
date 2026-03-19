@@ -54,7 +54,7 @@ The subsystem is organized into five mutually exclusive **Realms**. Each realm h
 
 ## 4. The Orchestration Lifecycle
 
-The subsystem operates through a "Promotion" lifecycle managed by the `ResourceOrchestrator`.
+The subsystem operates through a "Promotion" lifecycle managed by the `ResourceManager`.
 
 1.  **Classify**: The `ResourceFactory` identifies the realm of a raw URI string and promotes it to a specialized `Address`.
 2.  **Resolve**: If the intent is logical (e.g., `registry://`), the `ResourceCatalog` uses a `ResourceBoundary` to "join" the address with a physical **Anchor** (the security cage).

@@ -75,33 +75,33 @@ coord = VirtualCoordinate(virtual_path="registry/scans/report.pdf")
 
 ---
 
-## 2. ResourceOrchestrator (The Facade)
+## 2. ResourceManager (The Facade)
 
-The `ResourceOrchestrator` is the primary entry point for the application. It simplifies the multi-step promotion process into single method calls.
+The `ResourceManager` is the primary entry point for the Resource Identity subsystem. It simplifies the multi-step promotion process into single method calls.
 
 ```python
-from src.app.domain.services.resource_identity import ResourceOrchestrator
+from src.app.domain.services.resource_identity import ResourceManager
 
 # 1. SETUP: Components are usually injected via a Container
-orchestrator = ResourceOrchestrator(factory, catalog, registry)
+manager = ResourceManager(factory, catalog, registry)
 
 # 2. PROMOTION: String -> Secured Coordinate
 # This handles Classification, Catalog Lookup, and Boundary Resolution in one go.
 uri = "registry://scans/01.csv"
-coordinate = orchestrator.resolve_resource(uri)
+coordinate = manager.resolve_resource(uri)
 
 print(f"Physical Reality: {coordinate.raw_value}") 
 # Output: /srv/data/scans/01.csv (if registered as an anchor)
 
 # 3. MAPPING: Coordinate -> Adapter Blueprint
 # Find out HOW to talk to this resource.
-registration = orchestrator.get_registration(coordinate.protocol)
+registration = manager.get_registration(coordinate.protocol)
 adapter_cls = registration.adapter_cls
 
 # 4. VALIDATION: Policy Check
 # Ensure the coordinate doesn't violate security policies (Contextual Guard).
 try:
-    orchestrator.validate_policy(coordinate)
+    manager.validate_policy(coordinate)
 except PermissionError as e:
     print(f"Access Denied: {e}")
 ```

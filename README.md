@@ -126,3 +126,36 @@ Adapters declare their capabilities upfront:
 | :--- | :--- | :--- |
 | `posix` / `file` | `PosixFileStream` | Seekable, Writable, Local |
 | `http` / `https` | `HttpStream` | Sequential, Read-Only, Network |
+
+---
+
+## Documentation Architecture
+
+The project maintains a structured documentation suite organized by **Permanence** and **Intent**.
+
+```text
+docs/
+├── architecture/           # The "Source of Truth" (System as it exists)
+│   ├── standards/          # Engineering standards & patterns
+│   └── map.md              # High-level system topology
+├── design/                 # "Living" documents for active work
+│   ├── plans/              # Execution roadmaps (Refactors, Features)
+│   └── proposals/          # RFCs and design specifications
+├── examples/               # Developer Experience (Usage & Tutorials)
+│   ├── session_context.md  # How to use Traceability & Settings
+│   └── stream_client.md    # Getting started with the Client
+└── status_reports/         # Historical snapshots of project progress
+```
+
+### 1. Architecture (`docs/architecture/`)
+Contains the structural specification of the framework. This is the **internal** guide for maintainers, covering security boundaries, data models, and the "Smart Gateway" logic.
+
+### 2. Design (`docs/design/`)
+A workspace for evolution. **Proposals** are RFCs for future work, while **Plans** are active execution roadmaps for the current sprint.
+
+### 3. Examples (`docs/examples/`)
+The **external** developer guide. If you need to know how to implement a specific use case or use a new feature, start here.
+
+### 4. Status Reports (`docs/status_reports/`)
+Timestamped summaries of subsystem milestones and integration status.
+

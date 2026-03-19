@@ -15,7 +15,7 @@ The core **ResourceIdentity Subsystem** has been fully refactored and verified. 
 - [x] **Infrastructure Adapters**: Updated `PosixResourceBoundary` and created `HttpResourceBoundary` to fulfill the refined port contracts.
 - [x] **ResourceCatalog**: Refactored as a "Librarian" for the `registry://` protocol, managing anchors and boundaries.
 - [x] **ResourceFactory**: Implemented a registry-driven classification engine that avoids hardcoded protocol lists.
-- [x] **ResourceOrchestrator**: Created a facade for the subsystem to handle the full promotion lifecycle: *Classify -> Resolve -> Map -> Validate*.
+- [x] **ResourceManager**: Created a facade for the subsystem to handle the full promotion lifecycle: *Classify -> Resolve -> Map -> Validate*.
 - [x] **Unit & Integration Testing**: 30+ tests verifying security, resolution, and promotion across all 5 realms.
 - [x] **Export Cleanup**: Unified service exports in `src/app/domain/services/resource_identity/__init__.py`.
 
@@ -28,7 +28,7 @@ The focus now shifts to the **Stream Subsystem**, which consumes the validated `
 ### Targeted Refactoring:
 1.  **`DataStream` Port**: Update all adapters to accept `Coordinate` instead of the legacy `StreamLocation`.
 2.  **`StreamContract`**: Refactor from loosely typed kwargs to strictly typed dataclasses.
-3.  **`StreamManager`**: Refactor the primary use case to utilize the `ResourceOrchestrator` for all resolution and policy checks.
+3.  **`StreamManager`**: Refactored to utilize the `ResourceManager` for all resolution and policy checks, and `SessionManager` for context.
 
 ---
 
@@ -38,7 +38,7 @@ The focus now shifts to the **Stream Subsystem**, which consumes the validated `
 
 ### Component Acceptance Rules (Current):
 1. **Input Ports & App Services:** Accept `Address` or raw strings.
-2. **Domain Models & Orchestrators:** Work with `Address` until resolution is required.
+2. **Domain Models & Managers:** Work with `Address` until resolution is required.
 3. **Resolvers/Policies:** Accept `Address`, validate against rules, and emit `Coordinate`.
 4. **Output Ports & Adapters:** Accept **ONLY** `Coordinate`. An Adapter should never perform logical resolution or string parsing.
 
@@ -46,23 +46,23 @@ The focus now shifts to the **Stream Subsystem**, which consumes the validated `
 ```mermaid
 sequenceDiagram
     participant User
-    participant Orchestrator
+    participant Manager as ResourceManager
     participant Factory
     participant Catalog
     participant Boundary
     participant Adapter
 
-    User->>Orchestrator: resolve_resource("registry://scans/01.csv")
-    Orchestrator->>Factory: build("registry://scans/01.csv")
-    Factory-->>Orchestrator: returns VirtualAddress
+    User->>Manager: resolve_resource("registry://scans/01.csv")
+    Manager->>Factory: build("registry://scans/01.csv")
+    Factory-->>Manager: returns VirtualAddress
 
-    Orchestrator->>Catalog: resolve(VirtualAddress)
+    Manager->>Catalog: resolve(VirtualAddress)
     Catalog->>Boundary: resolve(Address, Anchor)
     Boundary-->>Catalog: returns LocalCoordinate("/srv/data/scans/01.csv")
-    Catalog-->>Orchestrator: returns LocalCoordinate
+    Catalog-->>Manager: returns LocalCoordinate
 
-    Orchestrator->>Orchestrator: validate_policy(LocalCoordinate)
+    Manager->>Manager: validate_policy(LocalCoordinate)
 
-    Orchestrator-->>User: returns LocalCoordinate
+    Manager-->>User: returns LocalCoordinate
     User->>Adapter: open(LocalCoordinate, Contract)
 ```

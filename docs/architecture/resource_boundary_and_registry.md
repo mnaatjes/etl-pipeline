@@ -28,11 +28,11 @@ Using specialized classes instead of raw strings prevents developer confusion an
 | `Coordinate` | `Reality` | A resource that has successfully passed the Boundary check. Trusted. |
 
 ### The Enforcement Rules:
-*   **Logical:** If you have an `Address`, you **must** call the `ResourceOrchestrator` to resolve it. It cannot be passed directly to an Adapter.
+*   **Logical:** If you have an `Address`, you **must** call the `ResourceManager` to resolve it. It cannot be passed directly to an Adapter.
 *   **Physical:** If you have a `Coordinate`, the "Security Guard" (Boundary) has already verified it. Adapters only accept this type.
 
 ## 4. Registry Abstraction (The "Input Port")
-In Hexagonal Architecture, the Registry is a Service that feeds into the Input Port (the Orchestrator).
+In Hexagonal Architecture, the Registry is a Service that feeds into the Input Port (the Manager).
 
 *   `src/app/ports/input/resource_boundaries/`: The refined interfaces for security enforcement.
 *   `src/app/domain/services/resource_identity/`: The domain services for classification and resolution.
@@ -41,14 +41,14 @@ In Hexagonal Architecture, the Registry is a Service that feeds into the Input P
 
 | Stage | Data Form | Type Label | Action |
 | :--- | :--- | :--- | :--- |
-| **Request** | `"registry://scans/file.xml"` | `Address` | Entered into `ResourceOrchestrator`. |
+| **Request** | `"registry://scans/file.xml"` | `Address` | Entered into `ResourceManager`. |
 | **Lookup** | `scans` | `ResourceKey` | Queried in the `ResourceCatalog`. |
 | **Boundary** | `ResourceBoundary` | Logic | Math: `Anchor + Subpath`. |
 | **Resolved** | `/srv/data/scans/file.xml` | `Coordinate` | The "Secure" output of the Boundary. |
 | **Execution** | `DataStream` | Adapter | Opens the `Coordinate`. |
 
 ## 6. The Registry & Catalog (The Manager)
-The Registry acts as the source of truth and the orchestrator. It doesn't perform the heavy lifting; instead, it knows which "tools" are available and who is allowed to use them.
+The Registry acts as the source of truth and the manager. It doesn't perform the heavy lifting; instead, it knows which "tools" are available and who is allowed to use them.
 
 *   **Role:** Inventory and Authorization.
 *   **Responsibilities:**
@@ -57,7 +57,7 @@ The Registry acts as the source of truth and the orchestrator. It doesn't perfor
     *   Deciding which "Worker" (Boundary) is assigned to a specific task.
 
 ## 7. The Boundary (The Worker)
-The Boundary is a controlled execution environment. It is "dumb" in the sense that it doesn't decide what to run; it simply executes whatever the Orchestrator gives it, within strict limits.
+The Boundary is a controlled execution environment. It is "dumb" in the sense that it doesn't decide what to run; it simply executes whatever the Manager gives it, within strict limits.
 
 *   **Role:** Isolation and Execution.
 *   **Responsibilities:**

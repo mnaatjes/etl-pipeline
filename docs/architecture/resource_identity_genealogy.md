@@ -70,9 +70,9 @@ classDiagram
 
 ---
 
-## 3. Resource Orchestrator (The Service)
+## 3. Resource Manager (The Service)
 
-The `ResourceOrchestrator` operates as a central **Domain Service** that manages the lifecycle of a resource from string to coordinate.
+The `ResourceManager` operates as a central **Domain Service** that manages the lifecycle of a resource from string to coordinate.
 
 ### Responsibilities:
 1.  **Orchestration:** Coordinates between the `ResourceFactory` (classification) and `ResourceCatalog` (resolution).
@@ -92,5 +92,5 @@ The `ResourceOrchestrator` operates as a central **Domain Service** that manages
 
 1.  **Contractual Inheritance:** Every implementation must inherit from its respective "Role" (`Address` or `Coordinate`).
 2.  **Behavioral Validation:** The `StreamManager` must only accept objects that inherit from `Coordinate`.
-3.  **No Primitive Obsession:** Raw strings must be promoted to the appropriate genealogy class before being passed between orchestrators.
+3.  **No Primitive Obsession:** Raw strings must be promoted to the appropriate genealogy class before being passed between managers.
 4.  **Realm Purity:** Transitions between realms (e.g., resolving a `VirtualAddress` to a `LocalCoordinate`) are explicitly managed by the `ResourceCatalog`.

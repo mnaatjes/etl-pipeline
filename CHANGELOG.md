@@ -5,19 +5,25 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [Unreleased] - 2026-03-19
 ### Added
-- **ResourceOrchestrator Facade**: Implemented a single entry point for the identity subsystem to manage the full lifecycle: *Classify -> Resolve -> Map -> Validate*.
+- **SessionManager Facade**: Implemented a dedicated manager for the Session Context subsystem, handling Traceability (Passports) and the Settings "Waterfall."
+- **ResourceManager Facade**: Implemented a single entry point for the identity subsystem to manage the full lifecycle: *Classify -> Resolve -> Map -> Validate*.
 - **Refined ResourceBoundary Ports**: Created realm-specific input ports (`LocalResourceBoundary`, `NetworkResourceBoundary`, etc.) using the **Template Method** pattern for centralized security enforcement.
 - **HttpResourceBoundary**: Dedicated adapter for URL security, implementing host-locking and protocol consistency.
-- **As-Built Documentation**: Comprehensive "Source of Truth" guide for the identity subsystem taxonomy and genealogy (`docs/as_built/resource_identity.md`).
-- **Unified Service Exports**: Clean entry point for identity services in `src/app/domain/services/resource_identity/__init__.py`.
+- **Master Architecture Index**: Created a high-signal `docs/architecture/README.md` featuring the "3-Diagram Rule" (Structural Map, Golden Path Sequence, and Entity Genealogy).
+- **SessionContext Example Guide**: Added `docs/examples/session_context.md` to provide a clear developer "Quick Start" for traceability and overrides.
+- **Visual Test Suite**: Implemented unit tests for `SessionManager` using manual fakes and `rich.inspect` for real-time terminal tracing of object state.
+- **Unified Service Exports**: Clean entry point for identity and session services in their respective `__init__.py` files.
 
 ### Changed
+- **Architectural Naming Standard**: Renamed all "Orchestrator" facades to "Managers" (`ResourceManager`, `SessionManager`) to clarify their roles as subsystem librarians and caretakers.
+- **Documentation Consolidation**: Reorganized the `docs/` directory into conventional `architecture/`, `design/`, `examples/`, and `status_reports/` hierarchies, removing redundant "as-built" and "implementation" folders.
+- **StreamManager Refinement**: Fully refactored the `StreamManager` use-case to delegate "What" (Identity/Policy) to the `ResourceManager` and "How" (Settings/Context) to the `SessionManager`.
+- **Settings Waterfall Resolution**: Centralized the ephemeral settings merging logic into the `SessionManager` via the `SettingsResolver`.
 - **Registry-Driven Classification**: Refactored `ResourceFactory` to dynamically discover resource realms via the `StreamRegistry`, eliminating hardcoded protocol lists.
 - **Protocol-Agnostic Catalog**: Updated `ResourceCatalog` to take precedence based on resource nicknames (keys), regardless of the URI protocol used.
 - **DataStream Migration**: Updated the `DataStream` output port to strictly consume the new `Coordinate` model instead of legacy `StreamLocation`.
-- **Infrastructure Refinement**: Thin-adapter refactor for `PosixResourceBoundary`, focusing on physical path math while the Port handles domain-level sanitization.
 
 ### Fixed
 - **Absolute Path Injection**: Fixed a vulnerability in `LocalResourceBoundary` where absolute paths could be injected as sub-paths.
@@ -26,43 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Memory Constructor Mismatches**: Fixed argument errors in `Memory`, `Synthetic`, and `Virtual` coordinate constructors.
 
 ### Removed
-- **Legacy Identity Models**: Deleted `LogicalURI`, `PhysicalPath`, and `PhysicalURI` (moved to `__resource_identity_legacy`).
+- **Legacy Identity Terminology**: Purged all remaining references to `ResourceOrchestrator`, `ContextOrchestrator`, `StreamLocation`, and `PhysicalPath` from code and documentation.
 - **Hardcoded Protocols**: Removed static protocol-to-realm mappings from the domain services.
 
 ## [## [Unreleased]] - 2026-03-04
 ### Added
 - **Smart Gateway Pattern**: Evolved the framework from a proxy to an intelligent resource mediator.
 - **Self-Aware Packets**: Replaced the legacy `Envelope` system with a high-resolution `Packet` model.
-- **StreamHandle & Capacity**: Introduced introspection via `StreamHandle`, allowing users to query resource capabilities (`can_seek`, `is_writable`) before execution.
-- **Unified StreamContext**: Implemented a "Passport" system for data, ensuring every byte is stamped with a `trace_id` and lineage.
-- **Catalog-Aware Resolution**: Refactored `ResourceFactory` to allow intuitive URI schemes (e.g., `posix://key`) for registered resources.
-- **Comprehensive Test Suite**: Rewrote the entire test suite (30+ tests) covering unit and integration scenarios without using `MagicMock`.
-
-### Fixed
-- **Circular Imports**: Resolved complex dependency loops between domain models and ports.
-- **URI Integrity**: Switched to `urllib.parse` for standard-compliant identity extraction.
-- **Changelog Automation**: Fixed the "Inception" bug in the `bumpversion` configuration.
-
-## [1.2.1] - 2026-03-04
-### Changed
-- Refined the versioning workflow and documentation.
-- Removed outdated `__src/` directory.
-- Corrected bumpversion `CHANGELOG` behavior.
-- Deleted `feat/middleware` branch after merge.
-
-## [1.2.0] - 2026-03-04
-### Added
-- **Catalog-Aware Resolution**: Initial implementation of intelligent URI resolution.
-- **Protocol Safelist**: Added a security firewall to prevent unrecognized URI schemes.
-- **Dependency Injection**: Updated `Bootstrap` to wire the `StreamRegistry` into the `ResourceFactory`.
-
-### Fixed
-- **Requirements**: Added missing `httpx` dependency.
-- **URI Pathing**: Fixed edge cases in `LogicalURI` sub-path extraction.
-
-## [1.0.0] - 2026-03-03
-### Added
-- Initial release of the StreamFlow framework.
-- Support for POSIX and HTTP adapters.
-- Resource identity and boundary security.
-- Composition Root (Bootstrap) architecture.
+...
