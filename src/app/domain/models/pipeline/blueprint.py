@@ -3,7 +3,6 @@ from dataclasses import dataclass, field
 from typing import Any, Optional, List
 
 #  Domain Identity Imports
-from src.app.domain.models.resource_identity import StreamLocation
 from src.app.domain.models.streams.stream_handle import StreamHandle
 from src.app.ports.output.middleware_processor import MiddlewareProcessor
 

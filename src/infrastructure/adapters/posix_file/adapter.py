@@ -5,7 +5,8 @@ from pathlib import Path
 from src.app.ports.output.datastream import DataStream
 from src.app.domain.models.streams import StreamCapacity, StreamContext
 from src.app.domain.models.packet import Packet, FlowSignal, PayloadSubject, Completeness
-from src.app.domain.models.resource_identity import PhysicalPath, StreamLocation
+from src.app.domain.models.resource_identity import Coordinate
+from src.app.domain.models.resource_identity.realms.local import LocalCoordinate
 from src.infrastructure.adapters.posix_file.contract import PosixFileContract
 from src.infrastructure.adapters.posix_file.policy import PosixFilePolicy
 from src.infrastructure.adapters.posix_file.enums import FileReadMode
@@ -17,33 +18,19 @@ class PosixFileStream(DataStream[PosixFileContract]):
     """
     def __init__(
             self, 
-            uri: StreamLocation,
+            uri: LocalCoordinate,
             context: StreamContext,
             policy: PosixFilePolicy, 
             as_sink: bool = False, 
             **settings
     ) -> None:
-        """Parent DataStream Parameter Pass"""
-        from src.app.domain.models.resource_identity import PhysicalURI
-
         # If writing, default to 'wb' if no mode provided
         if as_sink and "file_mode" not in settings:
             settings["file_mode"] = "wb"
 
-        # 1. Coordinate Conversion (PhysicalURI -> Path)
-        if isinstance(uri, PhysicalURI):
-            if uri.protocol != "file":
-                raise TypeError(f"PosixFileStream cannot handle non-file URI: {uri.protocol}")
-            # Extract path from file:///...
-            self._path = Path(uri.split("://")[1])
-        elif isinstance(uri, Path):
-            self._path = uri
-        else:
-            raise TypeError(
-                f"PosixFileStream integrity violation. Expected Path or PhysicalURI, "
-                f"but received {type(uri)}."
-            )
-
+        # Derive path from LocalCoordinate
+        self._path = Path(uri.raw_value)
+        
         super().__init__(uri, context, as_sink, policy, **settings)
 
         # Physical Connection between Python and Linux Filesystem
@@ -71,7 +58,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
         return PosixFileContract
 
     @classmethod
-    def exists(cls, location: StreamLocation) -> bool:
+    def exists(cls, location: Coordinate) -> bool:
         """
         High-Resolution Existence Check.
         
@@ -79,14 +66,13 @@ class PosixFileStream(DataStream[PosixFileContract]):
         before the stream machinery is even initialized.
         """
         # 1. Type Guard: Ensure we aren't trying to check a URL with a File Scout
-        if not isinstance(location, PhysicalPath):
+        if not isinstance(location, LocalCoordinate):
             # If the factory somehow handed an S3/HTTP URI to the Posix adapter,
             # we return False as this adapter cannot verify that medium.
             return False
-
-        # 2. Execution: PhysicalPath inherits from pathlib.Path
-        # No need for manual 'os.path.exists'—the type handles its own reality.
-        return location.exists()
+        
+        # Use pathlib to check raw string value
+        return Path(location.raw_value).exists()
     
     def open(self) -> None:
         """

@@ -1,6 +1,6 @@
 # Context & Settings Architecture
 
-This document codifies the management of **Identity (Traceability)** and **Configuration (Settings)** across the StreamFlow ecosystem.
+This document codifies the management of **Identity (Traceability)** and **Configuration (Settings)** across the Slalom ecosystem.
 
 ## 1. Vocabulary & Intent
 

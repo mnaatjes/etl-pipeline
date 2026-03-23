@@ -99,7 +99,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "streamflow-framework"
+name = "Slalom"
 dynamic = ["version"]
 
 [tool.hatch.version]

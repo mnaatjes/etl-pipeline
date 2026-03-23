@@ -3,7 +3,8 @@ import httpx
 from typing import Type, ContextManager, Optional, Iterator
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.datastream import DataStream
-from src.app.domain.models.resource_identity import RemoteURL, StreamLocation, PhysicalURI
+from src.app.domain.models.resource_identity import Coordinate
+from src.app.domain.models.resource_identity.realms.network import NetworkCoordinate
 from src.app.domain.models.streams import StreamCapacity, StreamContext
 from src.app.domain.models.packet import Packet, FlowSignal, PayloadSubject, Completeness
 from src.infrastructure.adapters.http.contract import HttpContract, HttpReadMode
@@ -15,7 +16,7 @@ class HttpStream(DataStream[HttpContract]):
     """
     def __init__(
             self, 
-            uri: RemoteURL,
+            uri: NetworkCoordinate,
             context: StreamContext,
             as_sink: bool|None = False,
             policy: StreamPolicy|None = None, 
@@ -32,9 +33,9 @@ class HttpStream(DataStream[HttpContract]):
         super().__init__(uri, context, as_sink, policy, **settings)
 
         # 0. RUNTIME INTEGRITY GUARD
-        if not isinstance(uri, str) or "://" not in uri:
+        if not isinstance(uri, NetworkCoordinate):
             raise TypeError(
-                f"HttpStream integrity violation. Expected RemoteURL (string), "
+                f"HttpStream integrity violation. Expected Network Coordinate, "
                 f"but received {type(uri)}."
             )
         # Cast as str from RemoteURL
@@ -81,9 +82,9 @@ class HttpStream(DataStream[HttpContract]):
             )
     
     @classmethod
-    def exists(cls, location: StreamLocation) -> bool:
+    def exists(cls, location: NetworkCoordinate) -> bool:
         """Atomic Existence Check via HEAD request."""
-        if not isinstance(location, PhysicalURI):
+        if not isinstance(location, NetworkCoordinate):
             return False
 
         try:

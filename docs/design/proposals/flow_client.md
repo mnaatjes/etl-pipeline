@@ -5,7 +5,7 @@
 **Component:** `Flow` (Facade)
 
 ## 1. Overview
-The `Flow` class is the primary public entry point for the **StreamFlow** framework. It acts as a high-level facade that orchestrates two distinct subsystems:
+The `Flow` class is the primary public entry point for the **Slalom** framework. It acts as a high-level facade that orchestrates two distinct subsystems:
 1.  **Resource Management:** Handled via the `StreamManager`.
 2.  **Pipeline Orchestration:** Handled via the `PipelineRunner`.
 

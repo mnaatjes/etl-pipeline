@@ -11,7 +11,7 @@ from src.app.domain.models.streams.stream_context import StreamContext
 @dataclass(frozen=True)
 class Packet:
     """
-    The 'Smart Unit of Work' for the StreamFlow Framework.
+    The 'Smart Unit of Work' for the Slalom Framework.
     
     Composes payload, type, signal, context, and identity into a 
     single, immutable, lifecycle-aware unit of work.

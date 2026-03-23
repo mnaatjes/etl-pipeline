@@ -20,7 +20,7 @@ class SessionManager:
 
     def build_context(
             self,
-            session_trace: TraceID,
+            session_trace: TraceID|str|None=None,
             method_trace: str|None=None,
             **overrides
     ) -> SessionContext:

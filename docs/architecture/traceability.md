@@ -1,6 +1,6 @@
 # Traceability Strategy: The `trace_id` Lifecycle
 
-This document outlines the architecture of traceability within the **StreamFlow** framework, comparing the legacy implementation with the refined session-based approach.
+This document outlines the architecture of traceability within the **Slalom** framework, comparing the legacy implementation with the refined session-based approach.
 
 ---
 

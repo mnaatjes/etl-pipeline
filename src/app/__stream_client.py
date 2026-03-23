@@ -7,7 +7,7 @@ from src.app.domain.services.traceability_provider import TraceabilityProvider
 
 class StreamClient:
     """
-    The Public Facade for the StreamFlow Framework.
+    The Public Facade for the Slalom framework.
     User's single point of entry for all DataStream operations.
     """
     def __init__(self, config: Optional[Dict[str, Any]] = None, trace_id:Optional[str] = None):

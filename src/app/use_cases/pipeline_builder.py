@@ -35,7 +35,7 @@ class PipelineBuilder:
         self._processors: List[MiddlewareProcessor] = []
         
         # Internal Adjudication State
-        # In StreamFlow, all raw source streams yield BYTES (protocol default).
+        # In Slalom, all raw source streams yield BYTES (protocol default).
         self._current_output_type: PayloadType = PayloadSubject.BYTES
 
     # --- FLUENT CONFIGURATION METHODS ---

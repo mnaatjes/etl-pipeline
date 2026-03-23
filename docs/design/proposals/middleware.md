@@ -1,6 +1,6 @@
 # Technical Specification: Packet-Processor Framework (2026)
 
-This document contains the finalized Python implementations for the core entities of the StreamFlow refactor. These entities live in the **Domain Layer** and provide the "Smart" logic for transport-agnostic stream processing.
+This document contains the finalized Python implementations for the core entities of the Slalom refactor. These entities live in the **Domain Layer** and provide the "Smart" logic for transport-agnostic stream processing.
 
 ## 1. The `Packet` Entity (The Smart Unit of Work)
 The `Packet` composes payload, type, signal, context, and identity into an immutable, lifecycle-aware message.
@@ -12,7 +12,7 @@ from typing import Any, Iterator, Optional
 @dataclass(frozen=True)
 class Packet:
     """
-    The 'Smart Unit of Work' for the StreamFlow Framework.
+    The 'Smart Unit of Work' for the Slalom framework.
     Composes payload, type, signal, context, and identity into a single movable unit.
     """
     # The 'What'
