@@ -3,6 +3,7 @@ from src.app.use_cases.manager import StreamManager
 from src.app.registry.engines import EngineRegistry
 from src.app.domain.models.pipeline.blueprint import PipelineBlueprint
 from src.app.ports.output.middleware_processor import MiddlewareProcessor
+from src.app.domain.models.session_context import SessionContext
 
 class PipelineRunner:
     """
@@ -32,8 +33,8 @@ class PipelineRunner:
         sources: List[str], 
         sinks: List[str], 
         processors: List[MiddlewareProcessor], 
+        session_context: SessionContext,
         engine_type: str = "local", 
-        trace_id: Optional[str] = None,
         **overrides
     ) -> None:
         """
@@ -52,16 +53,16 @@ class PipelineRunner:
             )
 
         # 2. RESOLUTION: Promote URIs to Smart Handles via StreamManager
-        # Ensure the pipeline's trace_id is injected into every handle.
-        overrides["trace_id"] = trace_id
+        # We spawn a local context to ensure overrides are captured for this specific run.
+        run_context = session_context.spawn(**overrides) if overrides else session_context
 
         source_handles = [
-            self._manager.get_handle(uri, **overrides)
+            self._manager.get_handle(uri, session_context=run_context)
             for uri in sources
         ]
         
         sink_handles = [
-            self._manager.get_handle(uri, as_sink=True, **overrides)
+            self._manager.get_handle(uri, session_context=run_context, as_sink=True)
             for uri in sinks
         ]
 
@@ -73,10 +74,10 @@ class PipelineRunner:
         )
 
         # 4. ENGINE SELECTION & EXECUTION
-        engine_cls = self._engine_registry.get_engine_cls(engine_type)
+        engine_cls = self._engine_registry.get_engine(engine_type)
         
         # Engines are transient objects initialized per-run
-        engine = engine_cls(trace_id=trace_id)
+        engine = engine_cls(trace_id=run_context.trace_id)
 
         # 5. LIFECYCLE HANDSHAKE (Setup -> Execute -> Shutdown)
         with engine.setup(blueprint) as executor:

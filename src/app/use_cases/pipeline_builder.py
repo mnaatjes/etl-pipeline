@@ -2,6 +2,7 @@ from typing import List, Optional, Any
 from src.app.domain.models.packet.payload import PayloadType, PayloadSubject
 from src.app.ports.output.middleware_processor import MiddlewareProcessor
 from src.app.use_cases.pipeline_runner import PipelineRunner
+from src.app.domain.models.session_context import SessionContext
 
 class PipelineBuilder:
     """
@@ -17,7 +18,7 @@ class PipelineBuilder:
         self, 
         runner: PipelineRunner, 
         initial_source_uri: str,
-        trace_id: str
+        session_context: SessionContext
     ) -> None:
         """
         Initializes the builder with its target runner and initial state.
@@ -27,7 +28,7 @@ class PipelineBuilder:
         :param trace_id: Unique identifier for the pipeline session.
         """
         self._runner = runner
-        self._trace_id = trace_id
+        self._context = session_context
         
         # Intent Collection State
         self._source_uris: List[str] = [initial_source_uri]
@@ -81,11 +82,15 @@ class PipelineBuilder:
         Proxies the collected intent to the PipelineRunner for resolution 
         and execution.
         """
+        # Finalize Context
+        final_context = self._context.spawn(**overrides)
+
+        # Retunn Runner
         return self._runner.execute_pipeline(
             sources=self._source_uris,
             sinks=self._sink_uris,
             processors=self._processors,
             engine_type=engine_type,
-            trace_id=self._trace_id,
+            session_context=final_context,
             **overrides
         )
