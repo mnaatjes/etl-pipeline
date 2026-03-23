@@ -14,13 +14,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Master Architecture Index**: Created a high-signal `docs/architecture/README.md` featuring the "3-Diagram Rule" (Structural Map, Golden Path Sequence, and Entity Genealogy).
 - **Specialized Provider Hierarchy**: Refactored the composition root into layered providers (`Config`, `Session`, `Identity`, `Stream`, `Pipeline`) for zero-redundancy dependency injection.
 - **Visual Test Suite**: Implemented unit tests for `SessionManager` using manual fakes and `rich.inspect` for real-time terminal tracing of object state.
+- **SessionContext:** Added `spawn()` method to merge `overrides` Dict property through system
 
 ### Changed
 - **Architectural Naming Standard**: Renamed all "Orchestrator" facades to "Managers" (`ResourceManager`, `SessionManager`) to clarify their roles as subsystem caretakers.
 - **Documentation Consolidation**: Reorganized the `docs/` directory into conventional hierarchies, removing redundant "as-built" and "implementation" folders.
 - **StreamManager Refinement**: Fully refactored the `StreamManager` use-case to delegate "What" (Identity/Policy) to the `ResourceManager` and "How" (Settings/Context) to the `SessionManager`.
+- **Identity Registration:** Removed `ProtocolRegistration` dataclass and replaced with `AdapterBlueprint`
 
 ### Fixed
+- **SessionContext:** Now carries `overrides` through system from `Gateway()` to call_level methods
+- **Adapters**: Refactored to accept ResourceIdentity types
 - **Registration Holes**: Closed the configuration gaps in `StreamManager.add_resource()` and implemented the delegation logic in `ResourceManager`.
 - **Lifecycle Management**: Implemented a robust `teardown` sequence in the `Bootstrap` class for graceful resource release.
 

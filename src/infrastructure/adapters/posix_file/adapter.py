@@ -30,9 +30,8 @@ class PosixFileStream(DataStream[PosixFileContract]):
 
         # Derive path from LocalCoordinate
         self._path = Path(uri.raw_value)
-        
-        super().__init__(uri, context, as_sink, policy, **settings)
 
+        super().__init__(uri, context, as_sink, policy, **settings)
         # Physical Connection between Python and Linux Filesystem
         # - Stores io.TextIOWrapper or io.BufferedRandom object
         self._file_handle: Optional[IO] = None

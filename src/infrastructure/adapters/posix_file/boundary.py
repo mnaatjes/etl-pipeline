@@ -21,11 +21,13 @@ class PosixResourceBoundary(LocalResourceBoundary):
         candidate = (anchor_root / subpath).resolve()
 
         # 3. VERIFY (Final safety check using physical resolution)
-        if not self.is_safe(LocalCoordinate(path=str(candidate)), anchor):
+        # Pass the protocol metadata so the registry lookup continues to work
+        candidate_coord = LocalCoordinate(path=str(candidate), protocol=address.protocol)
+        if not self.is_safe(candidate_coord, anchor):
             raise PermissionError(f"Boundary Violation! {candidate} escaped {anchor_root}")
     
-        # 4. PROMOTE: Use the address key to maintain identity
-        return LocalCoordinate(path=str(candidate), key=address.key)
+        # 4. PROMOTE: Reconstruct Coordinate with original key and protocol
+        return LocalCoordinate(path=str(candidate), protocol=address.protocol, key=address.key)
     
     def is_safe(self, resource: LocalCoordinate, anchor: LocalCoordinate) -> bool:
         """

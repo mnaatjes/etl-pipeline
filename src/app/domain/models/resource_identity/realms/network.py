@@ -7,10 +7,6 @@ class NetworkAddress(Address):
     Represents an incoming network INTENT
     - e.g. 'https://api.example.com/data'
     """
-    def __init__(self, uri: str) -> None:
-        super().__init__(None)
-        self._uri = uri
-
     @property
     def key(self) -> ResourceKey:
         return ResourceKey(self.parsed.authority)
@@ -18,10 +14,6 @@ class NetworkAddress(Address):
     @property
     def realm(self) -> Realm:
         return Realm.NETWORK
-
-    @property
-    def raw_value(self) -> str:
-        return self._uri
 
 class NetworkCoordinate(Coordinate):
     """

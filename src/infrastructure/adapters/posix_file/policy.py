@@ -35,16 +35,15 @@ class PosixFilePolicy(StreamPolicy):
         Performs the 'Pre-flight' check.
         Ensures the parent directory is at least accessible for traversal.
         """
-        from src.app.domain.models.resource_identity import PhysicalURI
+        from src.app.domain.models.resource_identity import LocalCoordinate
 
         # 1. Promote to Path object
-        if isinstance(resolved_config, PhysicalURI):
+        if isinstance(resolved_config, LocalCoordinate):
             if resolved_config.protocol != "file":
                 # Only 'file' is safe to promote to a local path
-                return False
-            path_obj = Path(resolved_config.split("://")[1])
+                path_obj = Path(resolved_config.raw_value)
         else:
-            path_obj = Path(resolved_config)
+            path_obj = Path(str(resolved_config))
 
         # 2. List Prohibited Directories
         prohibited = ["/etc", "/root", "/boot", "/proc", "/sys"]

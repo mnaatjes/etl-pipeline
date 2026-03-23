@@ -38,6 +38,6 @@ class SessionManager:
         )
         return SessionContext(trace_id=tid, overrides=overrides)
     
-    def resolve_settings(self, context: SessionContext) -> dict:
+    def resolve_settings(self, context: SessionContext, **call_overrides) -> dict:
         """Calculates the final 'Dense Bag' for the infrastructure layer"""
         return self._resolver.resolve(self._app_config, context.overrides)

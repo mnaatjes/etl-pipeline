@@ -55,12 +55,7 @@ class IdentityModule(AppModule):
 
         # 3. Bootstrap Registries & Catalogs
         for bp in blueprints:
-            stream_registry.register(
-                protocol=bp.protocol,
-                realm=bp.realm,
-                adapter_cls=bp.adapter_cls,
-                policy=bp.policy
-            )
+            stream_registry.register(blueprint=bp)
             if bp.boundary:
                 resource_catalog.register(
                     protocol=bp.protocol,

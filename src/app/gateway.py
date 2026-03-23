@@ -17,21 +17,27 @@ class Gateway:
             self,
             config: Optional[Dict[str, Any]] = None,
             trace_id: Optional[str] = None,
-            container: Optional[ServiceContainer] = None
+            container: Optional[ServiceContainer] = None,
+            **overrides
     ) -> None:
+        # 0. MERGE Final Configuration
+        final_config = {**(config or {}), **overrides}
+
         # 1. IoC CONTAINER
         if container:
             self._container = container
         else:
             from src.app.bootstrap import Bootstrap
-            self._container = Bootstrap.initialize(overrides=config or {})
+            self._container = Bootstrap.initialize(overrides=final_config or {})
 
         # 2. SESSION CONTEXT
+        # Pull SessionManager from ServiceContainer
         # Build the initial context (Passport) for this gateway instance
+        
         session_manager = self._container.session_manager
-        self._context = session_manager.build_context(
+        self._context   = session_manager.build_context(
             session_trace=trace_id, 
-            **(config or {})
+            **final_config
         )
 
         # 3. INTERNAL ORCHESTRATORS
@@ -40,18 +46,24 @@ class Gateway:
 
     # --- STREAM OPERATIONS ---
 
+    def get_handle(self, uri: str, as_sink: bool = False, **overrides) -> StreamHandle:
+        """Requests a Smart Handle for advanced I/O."""
+        # Refine call_context
+        call_context = self._context.spawn(**overrides)
+        # Return Handle with refined SessionContext
+        return self._manager.get_handle(uri, session_context=call_context, as_sink=as_sink)
+    
     def read(self, uri: str, **overrides) -> Iterator[Packet]:
         """Reads all packets from a URI using the gateway context."""
-        # TODO: Implement context merging for overrides
-        return self._manager.read(uri, session_context=self._context)
+        # Refine call_context
+        call_context = self._context.spawn(**overrides)
+        return self._manager.read(uri, session_context=call_context)
 
     def write(self, uri: str, data: Any, **overrides) -> None:
         """Writes data to a URI using the gateway context."""
-        self._manager.write(uri, session_context=self._context, data=data)
-
-    def get_handle(self, uri: str, as_sink: bool = False, **overrides) -> StreamHandle:
-        """Requests a Smart Handle for advanced I/O."""
-        return self._manager.get_handle(uri, session_context=self._context, as_sink=as_sink)
+        # Refine call_context
+        call_context = self._context.spawn(**overrides)
+        self._manager.write(uri, session_context=call_context, data=data)
 
     # --- CONFIGURATION ---
 

@@ -90,6 +90,14 @@ class Address(ResourceIdentity):
     - a URI string
     - Must be Resolvable
     """
+    def __init__(self, uri: str) -> None:
+        super().__init__(None)
+        self._uri = uri
+
+    @property
+    def raw_value(self) -> str:
+        return self._uri
+
     @property
     def is_address(self) -> bool: return True
 

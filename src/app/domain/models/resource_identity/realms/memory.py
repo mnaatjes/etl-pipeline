@@ -7,10 +7,6 @@ class MemoryAddress(Address):
     Represents an incoming memory-based INTENT
     - e.g. 'memory://cache/key'
     """
-    def __init__(self, uri: str) -> None:
-        super().__init__(None)
-        self._uri = uri
-
     @property
     def key(self) -> ResourceKey:
         return ResourceKey(self.parsed.authority)
@@ -18,10 +14,6 @@ class MemoryAddress(Address):
     @property
     def realm(self) -> Realm:
         return Realm.MEMORY
-
-    @property
-    def raw_value(self) -> str:
-        return self._uri
 
 class MemoryCoordinate(Coordinate):
     """

@@ -131,15 +131,19 @@ class StreamManager:
         :param anchor: The physical root (Path, URL, or raw string).
         """
         # 1. Promote raw anchor to a Coordinate
-        # We use the internal factory logic or manual instantiation based on protocol
         from src.app.domain.models.resource_identity import LocalCoordinate, NetworkCoordinate
         
-        if protocol in ["posix", "file"]:
-            coordinate = LocalCoordinate(path=str(anchor))
-        elif protocol in ["http", "https"]:
-            coordinate = NetworkCoordinate(url=str(anchor))
+        # 2. Get registration for the realm
+        registration = self._resources.get_registration(protocol)
+        
+        if registration.realm == Realm.LOCAL:
+            # Construct a canonical URI for the local anchor
+            uri = f"{protocol}://{key}/{str(anchor).lstrip('/')}"
+            coordinate = LocalCoordinate(uri=uri, key=ResourceKey(key))
+        elif registration.realm == Realm.NETWORK:
+            coordinate = NetworkCoordinate(url=str(anchor), key=ResourceKey(key))
         else:
-            raise ValueError(f"Unsupported protocol for manual registration: {protocol}")
+            raise ValueError(f"Unsupported realm for manual registration: {registration.realm}")
 
         # 2. Delegate to the Resource Facade
         self._resources.add_anchor(key=key, anchor=coordinate)

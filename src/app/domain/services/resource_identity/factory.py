@@ -103,7 +103,11 @@ class ResourceFactory:
         Direct promotion for trusted, registered protocols.
         """
         if address.is_local:
-            return LocalCoordinate(path=address.parsed.path, key=address.key)
+            return LocalCoordinate(
+                path=address.parsed.path, 
+                protocol=address.protocol, 
+                key=address.key
+            )
             
         if address.is_remote:
             return NetworkCoordinate(url=address.raw_value, key=address.key)

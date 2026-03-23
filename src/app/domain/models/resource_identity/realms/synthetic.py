@@ -7,10 +7,6 @@ class SyntheticAddress(Address):
     Represents an incoming synthetic (generated) INTENT
     - e.g. 'synthetic://gen/type'
     """
-    def __init__(self, uri: str) -> None:
-        super().__init__(None)
-        self._uri = uri
-
     @property
     def key(self) -> ResourceKey:
         return ResourceKey(self.parsed.authority)
@@ -18,10 +14,6 @@ class SyntheticAddress(Address):
     @property
     def realm(self) -> Realm:
         return Realm.SYNTHETIC
-
-    @property
-    def raw_value(self) -> str:
-        return self._uri
 
 class SyntheticCoordinate(Coordinate):
     """

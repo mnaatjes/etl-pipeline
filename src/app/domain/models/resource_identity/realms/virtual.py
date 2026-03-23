@@ -7,10 +7,6 @@ class VirtualAddress(Address):
     Represents an incoming logical virtual INTENT
     - e.g. 'virtual://registry/item'
     """
-    def __init__(self, uri: str) -> None:
-        super().__init__(None)
-        self._uri = uri
-
     @property
     def key(self) -> ResourceKey:
         return ResourceKey(self.parsed.authority)
@@ -18,10 +14,6 @@ class VirtualAddress(Address):
     @property
     def realm(self) -> Realm:
         return Realm.VIRTUAL
-
-    @property
-    def raw_value(self) -> str:
-        return self._uri
 
 class VirtualCoordinate(Coordinate):
     """

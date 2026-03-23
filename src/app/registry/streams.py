@@ -1,29 +1,16 @@
 # src/app/registry/streams.py
-from typing import Type, Optional
 from dataclasses import dataclass
-from src.app.ports.output.datastream import DataStream
-from src.app.ports.output.stream_policy import StreamPolicy
-from src.app.domain.models.resource_identity import Realm
-
-@dataclass(frozen=True)
-class ProtocolRegistration:
-    adapter_cls: Type[DataStream]
-    realm: Realm
-    policy: Optional[StreamPolicy] = None
+from src.app.domain.models.streams.adapter_blueprint import AdapterBlueprint
 
 class StreamRegistry:
     def __init__(self):
-        self._protocols: dict[str, ProtocolRegistration] = {}
+        self._protocols: dict[str, AdapterBlueprint] = {}
 
-    def register(self, protocol: str, adapter_cls: Type[DataStream], realm: Realm, policy: Optional[StreamPolicy] = None):
+    def register(self, blueprint: AdapterBlueprint):
         """Stores the blueprint with its associated realm."""
-        self._protocols[protocol] = ProtocolRegistration(
-            adapter_cls=adapter_cls, 
-            realm=realm,
-            policy=policy
-        )
+        self._protocols[blueprint.protocol] = blueprint
 
-    def get_registration(self, protocol: str) -> ProtocolRegistration:
+    def get_registration(self, protocol: str) -> AdapterBlueprint:
         """Retrieves the blueprint for the Manager."""
         if protocol not in self._protocols:
             raise ValueError(f"No adapter registered for protocol: {protocol}")

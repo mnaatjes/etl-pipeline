@@ -2,7 +2,8 @@
 from src.app.domain.models.resource_identity import Coordinate
 from src.app.domain.services.resource_identity.factory import ResourceFactory
 from src.app.domain.services.resource_identity.catalog import ResourceCatalog
-from src.app.registry.streams import StreamRegistry, ProtocolRegistration
+from src.app.registry.streams import StreamRegistry, AdapterBlueprint
+from src.app.ports.input.resource_boundaries import ResourceBoundary
 
 class ResourceManager:
     """
@@ -32,7 +33,7 @@ class ResourceManager:
         """
         return self._factory.build(uri)
 
-    def get_registration(self, protocol: str) -> ProtocolRegistration:
+    def get_registration(self, protocol: str) -> AdapterBlueprint:
         """
         Retrieves the adapter and policy registered for a technical protocol.
         """
@@ -70,7 +71,23 @@ class ResourceManager:
         from src.app.domain.models.resource_identity import ResourceKey
         self._catalog.add_anchor(key=ResourceKey(key), anchor=anchor)
 
-    def register_boundary(self, protocol: str, boundary: any) -> None:
+
+    def register_blueprint(self, blueprint: AdapterBlueprint) -> None:
+        """
+        Registers a complete adapter blueprint
+        Coordinated between the Registry (for IO) and the Catalog (for Security)
+        """
+        # 1. Regiser for IO
+        self._registry.register(blueprint)
+
+        # 2. Register for Security
+        if blueprint.boundary:
+            self._catalog.register(
+                protocol=blueprint.protocol,
+                boundary=blueprint.boundary
+            )
+
+    def register_boundary(self, protocol: str, boundary: ResourceBoundary) -> None:
         """
         Registers a security boundary for a specific protocol.
         """
