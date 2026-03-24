@@ -205,6 +205,9 @@ class PosixFileStream(DataStream[PosixFileContract]):
                 )
                 yield from self._process_chain(packet)
 
+        # Ensure all middleware is flushed
+        yield from self._flush_chain()
+
     def write(self, packet: Packet) -> None:
         """
         Writes the packet payload to disk.

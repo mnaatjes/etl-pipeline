@@ -71,6 +71,38 @@ class DataStream(ABC, Generic[T]):
 
         yield from apply_next(packet, 0)
 
+    def _flush_chain(self) -> Iterator[Packet]:
+        """
+        Triggers flush() on all processors in the chain and pipes results downstream.
+        """
+        def flush_recursive(index: int) -> Iterator[Packet]:
+            if index >= len(self._processors):
+                return
+
+            processor = self._processors[index]
+            # 1. Flush this processor
+            for flushed_packet in processor.flush():
+                # 2. Pipe flushed results through the REMAINING chain
+                yield from self._pipe_remaining(flushed_packet, index + 1)
+            
+            # 3. Move to next processor in the chain
+            yield from flush_recursive(index + 1)
+
+        yield from flush_recursive(0)
+
+    def _pipe_remaining(self, packet: Packet, start_index: int) -> Iterator[Packet]:
+        """Helper to pipe a flushed packet through the rest of the chain."""
+        def apply_next(p: Packet, index: int) -> Iterator[Packet]:
+            if index >= len(self._processors):
+                yield p
+                return
+
+            processor = self._processors[index]
+            for processed in processor.process(p):
+                yield from apply_next(processed, index + 1)
+
+        yield from apply_next(packet, start_index)
+
     # --- ABSTRACT PROPERTIES ---
 
     @property

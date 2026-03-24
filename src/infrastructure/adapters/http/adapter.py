@@ -139,6 +139,9 @@ class HttpStream(DataStream[HttpContract]):
 
         yield from strategy()
 
+        # Ensure all middleware is flushed
+        yield from self._flush_chain()
+
     def close(self) -> None:
         """Properly unwinds the network stack."""
         # 1. Close the Valve
