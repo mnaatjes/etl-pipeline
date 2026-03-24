@@ -5,6 +5,7 @@ from src.app.container import ServiceContainer
 
 # Registries & Use Cases
 from src.app.registry.engines import EngineRegistry
+from src.infrastructure.engines.local import LocalPipelineEngine
 from src.app.use_cases.pipeline_runner import PipelineRunner
 from src.app.use_cases.manager import StreamManager
 
@@ -15,7 +16,12 @@ class PipelineModule(AppModule):
     def register(self, container: ServiceContainer) -> None:
         """Phase 1: Foundation (Engine Registry)"""
         # 1. Instantiate and bind the EngineRegistry
-        container.bind(EngineRegistry, EngineRegistry())
+        registry = EngineRegistry()
+        
+        # 2. Map Infrastructure (The Engine Inventory)
+        registry.register("local", LocalPipelineEngine)
+        
+        container.bind(EngineRegistry, registry)
 
     def boot(self, container: ServiceContainer) -> None:
         """Phase 2: Orchestration (PipelineRunner)"""

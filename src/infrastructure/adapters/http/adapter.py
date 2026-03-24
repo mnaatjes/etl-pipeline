@@ -165,7 +165,7 @@ class HttpStream(DataStream[HttpContract]):
 
         for chunk in self._response.iter_bytes(chunk_size=self.chunk_size):
             if chunk:
-                yield Packet(
+                packet = Packet(
                     payload=chunk,
                     context=self._context, # Stamped with Passport
                     subject=PayloadSubject.BYTES,
@@ -173,6 +173,7 @@ class HttpStream(DataStream[HttpContract]):
                     completeness=Completeness.PARTIAL,
                     metadata={"mode": "bytes", "uri": self._url}
                 )
+                yield from self._process_chain(packet)
 
     def _read_lines(self) -> Iterator[Packet]:
         """Iterates over UTF-8 encoded lines."""
@@ -181,7 +182,7 @@ class HttpStream(DataStream[HttpContract]):
 
         for line in self._response.iter_lines():
             if line:
-                yield Packet(
+                packet = Packet(
                     payload=line.encode("utf-8"),
                     context=self._context,
                     subject=PayloadSubject.BYTES,
@@ -189,6 +190,7 @@ class HttpStream(DataStream[HttpContract]):
                     completeness=Completeness.COMPLETE,
                     metadata={"mode": "lines"}
                 )
+                yield from self._process_chain(packet)
 
     def _read_text(self) -> Iterator[Packet]:
         """Iterates over decoded text chunks."""
@@ -197,7 +199,7 @@ class HttpStream(DataStream[HttpContract]):
 
         for text_chunk in self._response.iter_text(chunk_size=self.chunk_size):
             if text_chunk:
-                yield Packet(
+                packet = Packet(
                     payload=text_chunk.encode("utf-8"),
                     context=self._context,
                     subject=PayloadSubject.BYTES,
@@ -205,6 +207,7 @@ class HttpStream(DataStream[HttpContract]):
                     completeness=Completeness.PARTIAL,
                     metadata={"mode": "text"}
                 )
+                yield from self._process_chain(packet)
 
     def _read_raw(self) -> Iterator[Packet]:
         """Direct socket pull (uncompressed)."""
@@ -213,7 +216,7 @@ class HttpStream(DataStream[HttpContract]):
 
         for raw_chunk in self._response.iter_raw():
             if raw_chunk:
-                yield Packet(
+                packet = Packet(
                     payload=raw_chunk,
                     context=self._context,
                     subject=PayloadSubject.BYTES,
@@ -221,3 +224,4 @@ class HttpStream(DataStream[HttpContract]):
                     completeness=Completeness.PARTIAL,
                     metadata={"mode": "raw", "compressed": True}
                 )
+                yield from self._process_chain(packet)

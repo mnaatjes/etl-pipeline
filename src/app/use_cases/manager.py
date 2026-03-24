@@ -101,81 +101,81 @@ class StreamManager:
     def list(self, uri: str, session_context: SessionContext) -> Iterator[Coordinate]:
         """
         Discovery: Lists resources available under a logical directory or authority.
-        
-        This method resolves the URI to a physical anchor and delegates the 
-        listing operation to the adapter registered for the protocol.
-        
-        :param uri: The logical URI or nickname (e.g., 'registry://scans/').
-        :param session_context: The passport providing traceability and settings.
-        :return: An iterator of Coordinate objects representing found resources.
         """
-        pass
+        coordinate = self._resources.resolve_resource(uri)
+        registration = self._resources.get_registration(coordinate.protocol)
+        yield from registration.adapter_cls.list(coordinate)
 
     def info(self, uri: str, session_context: SessionContext) -> Dict[str, Any]:
         """
         Metadata: Retrieves technical details about a resource without opening a stream.
-        
-        Provides information such as size, content-type, permissions, and 
-        last-modified timestamps as reported by the underlying filesystem or API.
-        
-        :param uri: The logical URI of the resource.
-        :param session_context: The passport providing traceability and settings.
-        :return: A dictionary containing resource metadata keys and values.
         """
-        pass
+        coordinate = self._resources.resolve_resource(uri)
+        registration = self._resources.get_registration(coordinate.protocol)
+        return registration.adapter_cls.info(coordinate)
 
     def wrap(self, handle: StreamHandle, processors: List[MiddlewareProcessor]) -> StreamHandle:
         """
         Orchestration: Decorates a Smart Handle with middleware processors.
-        
-        Allows standalone usage of processors (Checksums, Encryption, etc.) 
-        outside of a full Pipeline context.
-        
-        :param handle: The existing StreamHandle to be wrapped.
-        :param processors: A list of MiddlewareProcessors to apply to the stream.
-        :return: A new StreamHandle instance with the middleware chain injected.
         """
-        pass
+        # Inject the processors into the handle's adapter (The Wrapper Pattern)
+        # We assume the handle's context is preserved.
+        handle.inject_processors(processors)
+        return handle
 
     def delete(self, uri: str, session_context: SessionContext) -> bool:
         """
         CRUD: Removes a physical resource from the underlying medium.
-        
-        Performs a pre-flight policy check before delegating the deletion 
-        command to the appropriate adapter.
-        
-        :param uri: The logical URI of the resource to be deleted.
-        :param session_context: The passport providing traceability and settings.
-        :return: True if the operation was successful, False otherwise.
         """
-        pass
+        coordinate = self._resources.resolve_resource(uri)
+        self._resources.validate_policy(coordinate)
+        registration = self._resources.get_registration(coordinate.protocol)
+        return registration.adapter_cls.delete(coordinate)
 
     def move(self, src_uri: str, dest_uri: str, session_context: SessionContext) -> bool:
         """
         CRUD: Relocates a resource from one logical URI to another.
-        
-        This method coordinates between potentially different adapters if the 
-        move crosses protocol boundaries, or performs an atomic rename if supported.
-        
-        :param src_uri: The current logical URI of the resource.
-        :param dest_uri: The target logical URI.
-        :param session_context: The passport providing traceability and settings.
-        :return: True if the move was completed successfully.
         """
-        pass
+        src_coord = self._resources.resolve_resource(src_uri)
+        dest_coord = self._resources.resolve_resource(dest_uri)
+        
+        # Policy checks for both source and destination
+        self._resources.validate_policy(src_coord)
+        self._resources.validate_policy(dest_coord)
+        
+        # For now, we assume intra-adapter move
+        if src_coord.protocol != dest_coord.protocol:
+            # Fallback to copy-and-delete for cross-protocol moves (Simplified)
+            if self.copy(src_uri, dest_uri, session_context):
+                return self.delete(src_uri, session_context)
+            return False
+            
+        registration = self._resources.get_registration(src_coord.protocol)
+        return registration.adapter_cls.move(src_coord, dest_coord)
 
     def copy(self, src_uri: str, dest_uri: str, session_context: SessionContext) -> bool:
         """
         CRUD: Duplicates a resource to a new logical destination.
-        
-        Useful for archiving or preparing data for parallel processing.
-        
-        :param src_uri: The source logical URI.
-        :param dest_uri: The destination logical URI.
-        :param session_context: The passport providing traceability and settings.
-        :return: True if the copy was completed successfully.
         """
-        pass
+        src_coord = self._resources.resolve_resource(src_uri)
+        dest_coord = self._resources.resolve_resource(dest_uri)
+        
+        self._resources.validate_policy(src_coord)
+        self._resources.validate_policy(dest_coord)
+        
+        # Cross-adapter copy (Read from source, Write to destination)
+        if src_coord.protocol != dest_coord.protocol:
+            try:
+                with self.get_handle(src_uri, session_context) as source:
+                    with self.get_handle(dest_uri, session_context, as_sink=True) as sink:
+                        for packet in source.read():
+                            sink.write(packet.payload)
+                return True
+            except Exception:
+                return False
+                
+        registration = self._resources.get_registration(src_coord.protocol)
+        return registration.adapter_cls.copy(src_coord, dest_coord)
 
     def exists(self, uri: str) -> bool:
         """

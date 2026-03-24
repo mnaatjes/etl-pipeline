@@ -1,12 +1,13 @@
 # src/app/ports/output/datastream.py
 from dataclasses import fields
 from abc import ABC, abstractmethod
-from typing import Type, Iterator, Optional, TypeVar, Generic
+from typing import Type, Iterator, Optional, TypeVar, Generic, Dict, Any, List
 from src.app.ports.output.stream_policy import StreamPolicy
 from src.app.ports.output.stream_contract import StreamContract
 from src.app.domain.models.streams.stream_context import StreamContext
 from src.app.domain.models.streams.stream_capacity import StreamCapacity
 from src.app.domain.models.packet import Packet
+from src.app.ports.output.middleware_processor import MiddlewareProcessor
 
 from src.app.domain.models.resource_identity import Coordinate
 
@@ -44,6 +45,31 @@ class DataStream(ABC, Generic[T]):
             self._settings: T = self._settings_contract(**filtered)
         except (TypeError, ValueError) as e:
             raise ValueError(f"Stream Initialization Failed: {e}")
+
+        # 3. STANDALONE MIDDLEWARE
+        self._processors: List[MiddlewareProcessor] = []
+
+    # --- MIDDLEWARE METHODS ---
+
+    def inject_processors(self, processors: List[MiddlewareProcessor]) -> None:
+        """Adds processors to the standalone stream chain."""
+        self._processors.extend(processors)
+
+    def _process_chain(self, packet: Packet) -> Iterator[Packet]:
+        """
+        Recursive pipe-and-filter implementation for the internal chain.
+        This allows 'wrap()' to work on individual stream handles.
+        """
+        def apply_next(p: Packet, index: int) -> Iterator[Packet]:
+            if index >= len(self._processors):
+                yield p
+                return
+
+            processor = self._processors[index]
+            for processed in processor.process(p):
+                yield from apply_next(processed, index + 1)
+
+        yield from apply_next(packet, 0)
 
     # --- ABSTRACT PROPERTIES ---
 
@@ -106,6 +132,31 @@ class DataStream(ABC, Generic[T]):
             location (Coordinate): A LocalCoordinate or NetworkCoordinate.
         """
         pass
+
+    @classmethod
+    def list(cls, location: Coordinate) -> Iterator[Coordinate]:
+        """Discovery: Lists resources at the given location."""
+        raise NotImplementedError(f"{cls.__name__} does not support listing.")
+
+    @classmethod
+    def info(cls, location: Coordinate) -> Dict[str, Any]:
+        """Metadata: Retrieves technical details about a resource."""
+        raise NotImplementedError(f"{cls.__name__} does not support metadata retrieval.")
+
+    @classmethod
+    def delete(cls, location: Coordinate) -> bool:
+        """CRUD: Removes a physical resource."""
+        raise NotImplementedError(f"{cls.__name__} does not support deletion.")
+
+    @classmethod
+    def move(cls, src: Coordinate, dest: Coordinate) -> bool:
+        """CRUD: Relocates a resource."""
+        raise NotImplementedError(f"{cls.__name__} does not support move operations.")
+
+    @classmethod
+    def copy(cls, src: Coordinate, dest: Coordinate) -> bool:
+        """CRUD: Duplicates a resource."""
+        raise NotImplementedError(f"{cls.__name__} does not support copy operations.")
 
     # --- CONCRETE METHODS ---
 

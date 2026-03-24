@@ -1,5 +1,6 @@
 # src/app/providers/config.py
 
+from dataclasses import fields
 from src import __version__
 from src.app.ports.input.module import AppModule
 from src.app.container import ServiceContainer
@@ -14,11 +15,15 @@ class ConfigModule(AppModule):
 
     def register(self, container: ServiceContainer) -> None:
         """Phase 1: Foundation (AppConfig)"""
-        # 1. Instantiate and bind raw configuration
-        config = AppConfig(**(self.overrides or {}))
+        # 1. Filter overrides to match AppConfig fields
+        valid_fields = {f.name for f in fields(AppConfig)}
+        filtered = {k: v for k, v in (self.overrides or {}).items() if k in valid_fields}
+        
+        # 2. Instantiate and bind raw configuration
+        config = AppConfig(**filtered)
         container.bind(AppConfig, config)
 
-        # 2. Bind Version metadata
+        # 3. Bind Version metadata
         container.bind("api_version", __version__)
 
     def boot(self, container: ServiceContainer) -> None:

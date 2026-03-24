@@ -71,87 +71,65 @@ class Gateway:
     def list(self, uri: str, **overrides) -> Iterator[Coordinate]:
         """
         Discovery: Lists resources available under a logical directory or authority.
-        
-        :param uri: The logical URI or nickname (e.g., 'registry://scans/').
-        :param overrides: Run-time settings to merge into the session context.
-        :return: An iterator of Coordinate objects.
         """
-        pass
+        call_context = self._context.spawn(**overrides)
+        return self._manager.list(uri, session_context=call_context)
 
     def info(self, uri: str, **overrides) -> Dict[str, Any]:
         """
         Metadata: Retrieves technical details about a resource without opening a stream.
-        
-        :param uri: The logical URI of the resource.
-        :param overrides: Run-time settings to merge into the session context.
-        :return: A dictionary containing resource metadata.
         """
-        pass
+        call_context = self._context.spawn(**overrides)
+        return self._manager.info(uri, session_context=call_context)
 
     def exists(self, uri: str) -> bool:
         """
         Validation: Checks if a resource exists without opening a stream.
-        
-        :param uri: The logical URI to verify.
-        :return: True if the resource exists, False otherwise.
         """
-        pass
+        return self._manager.exists(uri)
 
     def delete(self, uri: str, **overrides) -> bool:
         """
         CRUD: Removes a physical resource from its underlying medium.
-        
-        :param uri: The logical URI of the resource to delete.
-        :param overrides: Run-time settings to merge into the session context.
-        :return: True if successful.
         """
-        pass
+        call_context = self._context.spawn(**overrides)
+        return self._manager.delete(uri, session_context=call_context)
 
     def move(self, src_uri: str, dest_uri: str, **overrides) -> bool:
         """
         CRUD: Relocates a resource from one logical URI to another.
-        
-        :param src_uri: The current logical URI.
-        :param dest_uri: The target logical URI.
-        :param overrides: Run-time settings to merge into the session context.
-        :return: True if relocation was successful.
         """
-        pass
+        call_context = self._context.spawn(**overrides)
+        return self._manager.move(src_uri, dest_uri, session_context=call_context)
 
     def copy(self, src_uri: str, dest_uri: str, **overrides) -> bool:
         """
         CRUD: Duplicates a resource to a new logical destination.
-        
-        :param src_uri: The source logical URI.
-        :param dest_uri: The target destination logical URI.
-        :param overrides: Run-time settings to merge into the session context.
-        :return: True if duplication was successful.
         """
-        pass
+        call_context = self._context.spawn(**overrides)
+        return self._manager.copy(src_uri, dest_uri, session_context=call_context)
 
     # --- ORCHESTRATION ---
 
     def pipeline(self, uri: str, **overrides) -> PipelineBuilder:
         """
         Fluent Entry Point: Initiates a new PipelineBuilder session.
-        
-        This is the 'Golden Path' for multi-step stream processing.
-        
-        :param uri: The starting source URI for the pipeline.
-        :param overrides: Initial settings for the pipeline session.
-        :return: A PipelineBuilder instance.
         """
-        pass
+        # 1. Refine Context (The Pipeline's Passport)
+        call_context = self._context.spawn(**overrides)
+
+        # 2. Instantiate the DSL Architect
+        return PipelineBuilder(
+            runner=self._pipeline, 
+            initial_source_uri=uri,
+            session_context=call_context
+        )
 
     def wrap(self, handle: StreamHandle, processors: List[MiddlewareProcessor]) -> StreamHandle:
         """
         Decorates a Smart Handle with standalone middleware processors.
-        
-        :param handle: The existing StreamHandle to wrap.
-        :param processors: List of middleware to apply.
-        :return: A new StreamHandle with the transformation chain injected.
         """
-        pass
+        return self._manager.wrap(handle, processors)
 
     # --- CONFIGURATION ---
 

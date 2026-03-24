@@ -1,4 +1,5 @@
 # src/app/ports/output/stream_contract.py
+from enum import Enum
 from typing import Any, get_origin, Union
 import typing
 from abc import ABC
@@ -34,7 +35,24 @@ class StreamContract(ABC):
             if field_type is float and isinstance(value, (int, float)):
                 continue
 
-            # 3. Final Safety: Only run isinstance if field_type is a concrete class
+            # 3. ENUM COERCION: If we got a string but need an Enum, attempt to cast it.
+            if isinstance(field_type, type) and issubclass(field_type, Enum):
+                if isinstance(value, str):
+                    try:
+                        # Attempt to find by value (e.g. "bytes" -> FileReadMode.BYTES)
+                        new_value = field_type(value)
+                        object.__setattr__(self, field_name, new_value)
+                        value = new_value
+                    except ValueError:
+                        # If value doesn't match, maybe they passed the name?
+                        try:
+                            new_value = field_type[value.upper()]
+                            object.__setattr__(self, field_name, new_value)
+                            value = new_value
+                        except (KeyError, AttributeError):
+                            pass # Let the next check raise the TypeError
+
+            # 4. Final Safety: Only run isinstance if field_type is a concrete class
             if isinstance(field_type, type):
                 if not isinstance(value, field_type):
                     raise TypeError(

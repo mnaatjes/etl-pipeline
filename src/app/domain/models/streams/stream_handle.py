@@ -1,11 +1,12 @@
 # src/app/domain/models/streams/stream_handle.py
-from typing import Iterator, Any, TYPE_CHECKING
+from typing import Iterator, Any, List, TYPE_CHECKING
 from src.app.domain.models.streams.stream_capacity import StreamCapacity
 from src.app.domain.models.streams.stream_context import StreamContext
 from src.app.domain.models.packet.base import Packet
 
 if TYPE_CHECKING:
     from src.app.ports.output.datastream import DataStream
+    from src.app.ports.output.middleware_processor import MiddlewareProcessor
 
 class StreamHandle:
     """
@@ -30,6 +31,10 @@ class StreamHandle:
         return self._adapter.is_open
 
     # --- ACTION METHODS ---
+
+    def inject_processors(self, processors: List['MiddlewareProcessor']) -> None:
+        """Injects middleware processors into the underlying adapter."""
+        self._adapter.inject_processors(processors)
 
     def read(self) -> Iterator[Packet]:
         """

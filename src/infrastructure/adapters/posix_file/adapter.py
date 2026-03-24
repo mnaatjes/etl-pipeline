@@ -60,18 +60,81 @@ class PosixFileStream(DataStream[PosixFileContract]):
     def exists(cls, location: Coordinate) -> bool:
         """
         High-Resolution Existence Check.
-        
-        Uses the Class-level expert logic to verify the physical coordinate 
-        before the stream machinery is even initialized.
         """
-        # 1. Type Guard: Ensure we aren't trying to check a URL with a File Scout
         if not isinstance(location, LocalCoordinate):
-            # If the factory somehow handed an S3/HTTP URI to the Posix adapter,
-            # we return False as this adapter cannot verify that medium.
             return False
-        
-        # Use pathlib to check raw string value
         return Path(location.raw_value).exists()
+
+    @classmethod
+    def list(cls, location: LocalCoordinate) -> Iterator[LocalCoordinate]:
+        """Discovery: Lists files in a directory."""
+        if not isinstance(location, LocalCoordinate):
+            return
+            
+        path = Path(location.raw_value)
+        if not path.is_dir():
+            return
+            
+        for item in path.iterdir():
+            yield LocalCoordinate(
+                path=str(item), 
+                protocol=location.protocol, 
+                key=location.key
+            )
+
+    @classmethod
+    def info(cls, location: LocalCoordinate) -> dict:
+        """Metadata: Retrieves file system details."""
+        if not isinstance(location, LocalCoordinate):
+            return {}
+            
+        path = Path(location.raw_value)
+        if not path.exists():
+            return {}
+            
+        stats = path.stat()
+        return {
+            "size": stats.st_size,
+            "created": stats.st_ctime,
+            "modified": stats.st_mtime,
+            "is_dir": path.is_dir(),
+            "permissions": oct(stats.st_mode & 0o777)
+        }
+
+    @classmethod
+    def delete(cls, location: LocalCoordinate) -> bool:
+        """CRUD: Deletes a file or empty directory."""
+        if not isinstance(location, LocalCoordinate):
+            return False
+            
+        path = Path(location.raw_value)
+        try:
+            if path.is_dir():
+                path.rmdir()
+            else:
+                path.unlink()
+            return True
+        except (FileNotFoundError, PermissionError, OSError):
+            return False
+
+    @classmethod
+    def move(cls, src: LocalCoordinate, dest: LocalCoordinate) -> bool:
+        """CRUD: Relocates a file using os.rename."""
+        try:
+            os.rename(src.raw_value, dest.raw_value)
+            return True
+        except (FileNotFoundError, PermissionError, OSError):
+            return False
+
+    @classmethod
+    def copy(cls, src: LocalCoordinate, dest: LocalCoordinate) -> bool:
+        """CRUD: Duplicates a file."""
+        import shutil
+        try:
+            shutil.copy2(src.raw_value, dest.raw_value)
+            return True
+        except (FileNotFoundError, PermissionError, OSError):
+            return False
     
     def open(self) -> None:
         """
@@ -111,33 +174,36 @@ class PosixFileStream(DataStream[PosixFileContract]):
 
         if strategy == FileReadMode.BYTES:
             while chunk := self._file_handle.read(self.chunk_size):
-                yield Packet(
+                packet = Packet(
                     payload=chunk,
                     context=self._context,
                     subject=PayloadSubject.BYTES,
                     signal=FlowSignal.STREAM_DATA,
                     completeness=Completeness.PARTIAL
                 )
+                yield from self._process_chain(packet)
         
         elif strategy == FileReadMode.LINES:
             for line in self._file_handle:
-                yield Packet(
+                packet = Packet(
                     payload=line,
                     context=self._context,
                     subject=PayloadSubject.BYTES,
                     signal=FlowSignal.STREAM_DATA,
                     completeness=Completeness.COMPLETE
                 )
+                yield from self._process_chain(packet)
                 
         elif strategy == FileReadMode.TEXT:
             while chunk := self._file_handle.read(self.chunk_size):
-                yield Packet(
+                packet = Packet(
                     payload=chunk,
                     context=self._context,
                     subject=PayloadSubject.BYTES,
                     signal=FlowSignal.STREAM_DATA,
                     completeness=Completeness.PARTIAL
                 )
+                yield from self._process_chain(packet)
 
     def write(self, packet: Packet) -> None:
         """
