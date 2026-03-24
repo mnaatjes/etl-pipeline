@@ -57,14 +57,19 @@ class LocalPipelineEngine(PipelineEngine):
 
     def _dispatch_to_sinks(self, packet: Packet) -> None:
         """Pipes a single packet through processors and into all sinks."""
+        if not self._blueprint: return
+        
+        processors = self._blueprint.processors
+        sinks = self._blueprint.sinks
+
         def process_recursive(p: Packet, index: int):
-            if index >= len(self._blueprint.processors):
+            if index >= len(processors):
                 # Broadcast to all sinks
-                for sink in self._blueprint.sinks:
+                for sink in sinks:
                     sink.write(p.payload)
                 return
 
-            processor = self._blueprint.processors[index]
+            processor = processors[index]
             for processed_packet in processor.process(p):
                 process_recursive(processed_packet, index + 1)
 
@@ -72,12 +77,16 @@ class LocalPipelineEngine(PipelineEngine):
 
     def _trigger_flush(self) -> None:
         """Triggers the flush signal through the entire chain."""
+        if not self._blueprint: return
+        
+        processors = self._blueprint.processors
+
         def flush_recursive(index: int):
-            if index >= len(self._blueprint.processors):
+            if index >= len(processors):
                 # No more processors to flush
                 return
 
-            processor = self._blueprint.processors[index]
+            processor = processors[index]
             # 1. Flush this processor
             for flushed_packet in processor.flush():
                 # 2. Pipe flushed results through the REMAINING chain
@@ -90,13 +99,18 @@ class LocalPipelineEngine(PipelineEngine):
 
     def _dispatch_to_remaining_sinks(self, packet: Packet, start_index: int) -> None:
         """Helper to pipe a flushed packet through the rest of the chain."""
+        if not self._blueprint: return
+
+        processors = self._blueprint.processors
+        sinks = self._blueprint.sinks
+
         def process_recursive(p: Packet, index: int):
-            if index >= len(self._blueprint.processors):
-                for sink in self._blueprint.sinks:
+            if index >= len(processors):
+                for sink in sinks:
                     sink.write(p.payload)
                 return
 
-            processor = self._blueprint.processors[index]
+            processor = processors[index]
             for processed_packet in processor.process(p):
                 process_recursive(processed_packet, index + 1)
 
