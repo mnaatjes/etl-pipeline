@@ -1,27 +1,43 @@
 # Middleware Implementation Examples
 
-By inheriting from the updated `ByteMiddleware` and `ObjectMiddleware`, specific implementations become incredibly focused. They no longer worry about envelopes, regimes, or type-checking—they just do their specific job.
+By implementing the `MiddlewareProcessor` port, specific transformations become focused and type-safe.
 
 ---
 
-## 1. The Secure Hasher (Regime Preserver)
-Calculates the hash of the payload but leaves the `Envelope` exactly as it found it.
+## 1. The Secure Hasher (Binary Processor)
+Calculates the SHA256 hash of chunks in a byte stream.
 
 ```python
-# src/app/middleware/security.py
+# src/infrastructure/processors/security.py
 import hashlib
-from ..ports.middleware import ByteMiddleware
+from typing import Iterator
+from src.app.ports.output.middleware_processor import MiddlewareProcessor
+from src.app.domain.models.packet import Packet
+from src.app.domain.models.packet.payload import PayloadSubject, PayloadType
 
-class SHA256Hasher(ByteMiddleware):
+class SHA256Hasher(MiddlewareProcessor):
     def __init__(self):
         self._sha256 = hashlib.sha256()
 
-    def process(self, item: bytes) -> bytes:
-        # We only get here if envelope.regime was 'BYTES'
-        self._sha256.update(item)
+    @property
+    def input_subject(self) -> PayloadType:
+        return PayloadSubject.BYTES
+
+    @property
+    def output_subject(self) -> PayloadType:
+        return PayloadSubject.BYTES
+
+    def process(self, packet: Packet) -> Iterator[Packet]:
+        # Process the binary payload
+        self._sha256.update(packet.payload)
         
-        # Returns bytes so the parent can repack them in the envelope
-        return item
+        # Yield the packet unchanged (we are just inspecting)
+        yield packet
+
+    def flush(self) -> Iterator[Packet]:
+        # Optionally yield the final hash as a metadata packet or similar
+        # For this example, we just finish.
+        yield from []
 
     def get_hash(self) -> str:
         return self._sha256.hexdigest()
@@ -29,21 +45,35 @@ class SHA256Hasher(ByteMiddleware):
 
 ---
 
-## 2. The Field Mapper (Regime Preserver)
-Operates on structured data, expecting an `OBJECT` regime and returning an `OBJECT` regime.
+## 2. The Field Mapper (Object Processor)
+Operates on structured dictionaries, transforming fields.
 
 ```python
-# src/app/middleware/transforms.py
-from typing import Dict
-from ..ports.middleware import ObjectMiddleware
+# src/infrastructure/processors/transforms.py
+from typing import Dict, Iterator
+from src.app.ports.output.middleware_processor import MiddlewareProcessor
+from src.app.domain.models.packet import Packet
+from src.app.domain.models.packet.payload import PayloadSubject, PayloadType
 
-class FieldRenameMapper(ObjectMiddleware):
+class FieldRenameMapper(MiddlewareProcessor):
     def __init__(self, mapping: Dict[str, str]):
         self.mapping = mapping
 
-    def process(self, item: dict) -> dict:
+    @property
+    def input_subject(self) -> PayloadType:
+        return PayloadSubject.DICT
+
+    @property
+    def output_subject(self) -> PayloadType:
+        return PayloadSubject.DICT
+
+    def process(self, packet: Packet) -> Iterator[Packet]:
         # Standard dictionary transformation logic
-        return {self.mapping.get(k, k): v for k, v in item.items()}
+        original = packet.payload
+        transformed = {self.mapping.get(k, k): v for k, v in original.items()}
+        
+        # Spawn a new packet with the transformed payload to maintain lineage
+        yield packet.spawn(payload=transformed)
 ```
 
 ---

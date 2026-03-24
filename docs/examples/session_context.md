@@ -44,18 +44,21 @@ The `SessionContext` is a mandatory argument for the `StreamManager`. It tells t
 ```python
 from src.app.use_cases.manager import StreamManager
 
-# 1. Provide the URI and the SessionContext
+# 1. Provide the URI and let the Gateway handle context
 uri = "registry://scans/01.csv"
-handle = stream_manager.get_handle(uri, session_context=custom_context)
+
+# The Gateway instance holds its own 'Passport'. 
+# Overrides can be passed directly to Gateway methods.
+handle = gateway.get_handle(uri, chunk_size=8192)
 
 # 2. The Waterfall Effect
 # - Global settings (AppConfig) are loaded first.
-# - 'chunk_size=4096' and 'verify_ssl=False' are merged in.
+# - 'chunk_size=8192' is merged in.
 # - The resulting 'Dense Bag' is injected into the Adapter.
 with handle as stream:
     for packet in stream.read():
-        # Each packet now carries the 'job-01-processing' trace_id
-        print(f"Trace: {packet.trace_id} | Data: {packet.payload}")
+        # Each packet now carries the gateway's trace_id
+        print(f"Trace: {packet.context.trace_id} | Data: {packet.payload}")
 ```
 
 ---

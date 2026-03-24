@@ -12,26 +12,33 @@ The system classifies every resource into one of five mutually exclusive realms,
 Used for POSIX, Windows, or any hierarchical local storage.
 
 ```python
-from src.app.domain.models.resource_identity import LocalAddress, LocalCoordinate
+from src.app.domain.models.resource_identity import LocalAddress, LocalCoordinate, ResourceKey
 
 # INTENT: "I want to access this local path"
-address = LocalAddress("posix:///tmp/scans/01.csv")
+address = LocalAddress("posix://scans/01.csv")
 
 # REALITY: "The verified physical path"
-coord = LocalCoordinate(path="/tmp/scans/01.csv", key="scans")
+coord = LocalCoordinate(
+    path="/tmp/scans/01.csv", 
+    protocol="posix", 
+    key=ResourceKey("scans")
+)
 ```
 
 ### B. Network Realm (URLs)
 Used for HTTP, HTTPS, S3, FTP, etc.
 
 ```python
-from src.app.domain.models.resource_identity import NetworkAddress, NetworkCoordinate
+from src.app.domain.models.resource_identity import NetworkAddress, NetworkCoordinate, ResourceKey
 
 # INTENT: "I want to call this API"
 address = NetworkAddress("https://api.example.com/v1/data")
 
 # REALITY: "The verified URL"
-coord = NetworkCoordinate(url="https://api.example.com/v1/data", key="api")
+coord = NetworkCoordinate(
+    url="https://api.example.com/v1/data", 
+    key=ResourceKey("api")
+)
 ```
 
 ### C. Memory Realm (In-Process)
@@ -123,11 +130,12 @@ catalog = ResourceCatalog()
 catalog.register("posix", PosixResourceBoundary())
 
 # 2. Add an Anchor (Nickname -> Physical Root)
-anchor = LocalCoordinate("/srv/data/scans")
+# Anchors are now Coordinates themselves.
+anchor = LocalCoordinate(path="/srv/data/scans", protocol="posix")
 catalog.add_anchor(ResourceKey("scans"), anchor)
 
 # 3. Discovery
-if catalog.has_resource("posix", "scans"):
+if catalog.has_anchor(ResourceKey("scans")):
     print("Catalog knows where 'scans' are located.")
 ```
 
