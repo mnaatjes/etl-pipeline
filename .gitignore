@@ -41,3 +41,6 @@ data/
 # Refactoring
 __src/
 docs/branding/
+
+# Utilities
+.agents
