@@ -75,7 +75,40 @@ for packet in slalom.read("registry://logs/system.log"):
 
 ---
 
-## 4. Standalone Middleware Decoration
+## 4. Resource Discovery (list & info)
+
+Explore available resources and retrieve metadata without opening a full data stream.
+
+```python
+# 1. List contents of a logical location
+# Returns an iterator of Coordinates
+for coord in slalom.list("registry://scans"):
+    print(f"Found Resource: {coord.raw_value} (Protocol: {coord.protocol})")
+
+# 2. Retrieve technical metadata
+# Returns a dictionary containing size, modified_at, etc.
+metadata = slalom.info("registry://scans/01.csv")
+print(f"File Size: {metadata['size']} bytes")
+print(f"Last Modified: {metadata['modified_at']}")
+```
+
+---
+
+## 5. CRUD Operations (delete)
+
+Manage the lifecycle of physical resources.
+
+```python
+# Check if a resource exists before attempting deletion
+if slalom.exists("posix:///tmp/old_data.tmp"):
+    success = slalom.delete("posix:///tmp/old_data.tmp")
+    if success:
+        print("Resource successfully removed.")
+```
+
+---
+
+## 6. Standalone Middleware Decoration
 
 You can wrap a `StreamHandle` with middleware processors outside of a full pipeline context.
 
