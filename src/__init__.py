@@ -9,4 +9,4 @@ Y	Minor	Initial development / Alpha (v0.x.x)
 Z	Patch	Bug Fixes / Refactors
 """
 
-__version__ = "0.9.0"
+__version__ = "0.9.1"

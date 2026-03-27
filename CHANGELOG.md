@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Registration Holes**: Closed the configuration gaps in `StreamManager.add_resource()` and implemented the delegation logic in `ResourceManager`.
 - **Lifecycle Management**: Implemented a robust `teardown` sequence in the `Bootstrap` class for graceful resource release.
 
-## [0.9.0] - 2026-03-19
+## [## [Unreleased]] - 2026-03-19
 ### Changed
 - Ret-conned versioning strategy to reflect the pre-Slalom experimental phase as `0.x.x`.
 - Consolidation of the identity refactor and session context work into the final alpha milestone.
