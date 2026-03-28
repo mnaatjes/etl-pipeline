@@ -181,7 +181,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
                     signal=FlowSignal.STREAM_DATA,
                     completeness=Completeness.PARTIAL
                 )
-                yield from self._process_chain(packet)
+                yield packet
         
         elif strategy == FileReadMode.LINES:
             for line in self._file_handle:
@@ -192,7 +192,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
                     signal=FlowSignal.STREAM_DATA,
                     completeness=Completeness.COMPLETE
                 )
-                yield from self._process_chain(packet)
+                yield packet
                 
         elif strategy == FileReadMode.TEXT:
             while chunk := self._file_handle.read(self.chunk_size):
@@ -203,10 +203,7 @@ class PosixFileStream(DataStream[PosixFileContract]):
                     signal=FlowSignal.STREAM_DATA,
                     completeness=Completeness.PARTIAL
                 )
-                yield from self._process_chain(packet)
-
-        # Ensure all middleware is flushed
-        yield from self._flush_chain()
+                yield packet
 
     def write(self, packet: Packet) -> None:
         """

@@ -7,7 +7,6 @@ from src.app.ports.output.stream_contract import StreamContract
 from src.app.domain.models.streams.stream_context import StreamContext
 from src.app.domain.models.streams.stream_capacity import StreamCapacity
 from src.app.domain.models.packet import Packet
-from src.app.ports.output.middleware_processor import MiddlewareProcessor
 
 from src.app.domain.models.resource_identity import Coordinate
 
@@ -46,63 +45,6 @@ class DataStream(ABC, Generic[T]):
         except (TypeError, ValueError) as e:
             raise ValueError(f"Stream Initialization Failed: {e}")
 
-        # 3. STANDALONE MIDDLEWARE
-        self._processors: List[MiddlewareProcessor] = []
-
-    # --- MIDDLEWARE METHODS ---
-
-    def inject_processors(self, processors: List[MiddlewareProcessor]) -> None:
-        """Adds processors to the standalone stream chain."""
-        self._processors.extend(processors)
-
-    def _process_chain(self, packet: Packet) -> Iterator[Packet]:
-        """
-        Recursive pipe-and-filter implementation for the internal chain.
-        This allows 'wrap()' to work on individual stream handles.
-        """
-        def apply_next(p: Packet, index: int) -> Iterator[Packet]:
-            if index >= len(self._processors):
-                yield p
-                return
-
-            processor = self._processors[index]
-            for processed in processor.process(p):
-                yield from apply_next(processed, index + 1)
-
-        yield from apply_next(packet, 0)
-
-    def _flush_chain(self) -> Iterator[Packet]:
-        """
-        Triggers flush() on all processors in the chain and pipes results downstream.
-        """
-        def flush_recursive(index: int) -> Iterator[Packet]:
-            if index >= len(self._processors):
-                return
-
-            processor = self._processors[index]
-            # 1. Flush this processor
-            for flushed_packet in processor.flush():
-                # 2. Pipe flushed results through the REMAINING chain
-                yield from self._pipe_remaining(flushed_packet, index + 1)
-            
-            # 3. Move to next processor in the chain
-            yield from flush_recursive(index + 1)
-
-        yield from flush_recursive(0)
-
-    def _pipe_remaining(self, packet: Packet, start_index: int) -> Iterator[Packet]:
-        """Helper to pipe a flushed packet through the rest of the chain."""
-        def apply_next(p: Packet, index: int) -> Iterator[Packet]:
-            if index >= len(self._processors):
-                yield p
-                return
-
-            processor = self._processors[index]
-            for processed in processor.process(p):
-                yield from apply_next(processed, index + 1)
-
-        yield from apply_next(packet, start_index)
-
     # --- ABSTRACT PROPERTIES ---
 
     @property
@@ -116,7 +58,6 @@ class DataStream(ABC, Generic[T]):
     def _settings_contract(self) -> Type[T]:
         """Mandatory Hook for Adapters."""
         pass
-
 
     # --- CONCRETE PROPERTIES ---
 

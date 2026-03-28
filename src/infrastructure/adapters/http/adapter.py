@@ -139,9 +139,6 @@ class HttpStream(DataStream[HttpContract]):
 
         yield from strategy()
 
-        # Ensure all middleware is flushed
-        yield from self._flush_chain()
-
     def close(self) -> None:
         """Properly unwinds the network stack."""
         # 1. Close the Valve
@@ -176,7 +173,7 @@ class HttpStream(DataStream[HttpContract]):
                     completeness=Completeness.PARTIAL,
                     metadata={"mode": "bytes", "uri": self._url}
                 )
-                yield from self._process_chain(packet)
+                yield packet
 
     def _read_lines(self) -> Iterator[Packet]:
         """Iterates over UTF-8 encoded lines."""
@@ -193,7 +190,7 @@ class HttpStream(DataStream[HttpContract]):
                     completeness=Completeness.COMPLETE,
                     metadata={"mode": "lines"}
                 )
-                yield from self._process_chain(packet)
+                yield packet
 
     def _read_text(self) -> Iterator[Packet]:
         """Iterates over decoded text chunks."""
@@ -210,7 +207,7 @@ class HttpStream(DataStream[HttpContract]):
                     completeness=Completeness.PARTIAL,
                     metadata={"mode": "text"}
                 )
-                yield from self._process_chain(packet)
+                yield packet
 
     def _read_raw(self) -> Iterator[Packet]:
         """Direct socket pull (uncompressed)."""
@@ -227,4 +224,4 @@ class HttpStream(DataStream[HttpContract]):
                     completeness=Completeness.PARTIAL,
                     metadata={"mode": "raw", "compressed": True}
                 )
-                yield from self._process_chain(packet)
+                yield packet

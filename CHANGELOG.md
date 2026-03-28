@@ -26,6 +26,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **Leaky Middleware Abstractions**: Uncoupled the Middleware Processors from the DataStream, appended property to *StreamHandle* for processors, and added 
+    * Added `self._catalog` *MiddlwareCatalog* and `self._engine` *MiddlewareEngine* to *StreamHandle*
+    * Added `middleware` property to *StreamHandle* which returns contents of MiddlewareCatalog
+    * Added `list_processors()` method to *StreamHandle* which returns list of class-names of Middleware Processors assigned to the Streamhandle
+    * Removed `_processors` property and methods: `inject_processors()`, `_process_chain()`, `_flush_chain()`, and `_pipe_remaining()` from *DataStream*. Now managed by *MiddlewareEngine*
+    * Refactored *PosixFileAdapter* and *HttpAdapter* to remove Middleware aware methods and decouple
+    
 
 ## [0.9.1]
 ### Added
