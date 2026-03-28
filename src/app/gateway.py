@@ -172,6 +172,31 @@ class Gateway:
         """
         return self._manager.get_resources()
     
+    def get_resource(self, key: str) -> Dict[str, str]:
+        """
+        Retrieves the metadata for a single registered resource anchor.
+        
+        This is a convenience method for inspecting a specific logical key
+        without fetching the entire catalog.
+        
+        Args:
+            key (str): The logical nickname (e.g., 'scans').
+            
+        Returns:
+            Dict[str, str]: The metadata for the resource (anchor, protocol, boundary).
+            
+        Raises:
+            KeyError: If the resource key is not registered in the catalog.
+            
+        Example:
+            >>> app.get_resource("scans")
+            {'anchor': 'file:///data', 'protocol': 'posix', 'boundary': 'PosixBoundary'}
+        """
+        resources = self.get_resources()
+        if key not in resources:
+            raise KeyError(f"Resource Key '{key}' NOT Found in Catalog!")
+        return resources[key]
+
     def is_supported_uri(self, uri: str) -> bool:
         """
         Checks if the framework is capable of handling the given URI.

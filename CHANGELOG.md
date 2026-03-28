@@ -25,6 +25,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 ### Fixed
+- **Leaky Middleware Abstractions**: Uncoupled the Middleware Processors from the DataStream, appended property to *StreamHandle* for processors, and added 
 
 ## [0.9.1]
 ### Added
