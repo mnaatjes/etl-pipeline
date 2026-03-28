@@ -31,7 +31,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Identity Inconsistency**: Fixed a bug in Network resource registration where the protocol was not correctly propagated to the Coordinate.
 - **Leaky Middleware Abstractions**: Resolved the SRP violation where the `DataStream` port was responsible for transformation orchestration.
 
-## [0.9.1]
+## [## [Unreleased]]
 ### Added
 - **Documentation**: Updated `docs/examples/` documentation.
 - **Agents and Scripts**: Added local `.agents/` and `.scripts/` directories to manage development.

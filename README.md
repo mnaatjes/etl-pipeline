@@ -1,6 +1,6 @@
 # Slalom Framework
 
-![Version](https://img.shields.io/badge/version-0.9.1-blue.svg)
+![Version](https://img.shields.io/badge/version-0.9.2-blue.svg)
 
 ## Design Philosophy
 
