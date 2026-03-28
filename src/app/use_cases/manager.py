@@ -1,34 +1,34 @@
+# src/app/use_cases/manager.py
 from typing import Any, Dict, Optional, Iterator, List
-from uuid import uuid4
-
-# Domain Imports
-#from src.app.domain.models.resource_identity import StreamLocation, PhysicalPath, PhysicalURI, ResourceKey
 from src.app.domain.models.app_config import AppConfig
 from src.app.domain.models.streams import StreamHandle, StreamContext, StreamCapacity
 from src.app.domain.models.packet import Packet
 from src.app.domain.models.session_context import SessionContext
 from src.app.domain.models.resource_identity import Coordinate, Realm, ResourceKey
-# Service/Port Imports
 from src.app.domain.services.resource_identity import ResourceManager
 from src.app.domain.services.session_context import SessionManager
-from src.app.registry.streams import StreamRegistry
 from src.app.ports.output.middleware_processor import MiddlewareProcessor
 
 class StreamManager:
     """
     The Smart Gateway Orchestrator.
     
-    SRP: Manages the resource lifecycle by resolving identities, 
-    negotiating capabilities, and injecting traceability context.
+    This use-case service manages the resource lifecycle by resolving 
+    identities, negotiating capabilities, and injecting traceability 
+    context into orchestrated StreamHandles.
     """
+    
     def __init__(
         self, 
         resource_manager: ResourceManager,
         session_manager: SessionManager
     ) -> None:
         """
-        :param resource_manager: The Facade for the Resource Identity Subsystem.
-        :param session_manager: The Facade for the Session Context Subsystem.
+        Initializes the StreamManager with required subsystem facades.
+        
+        Args:
+            resource_manager (ResourceManager): The identity subsystem authority.
+            session_manager (SessionManager): The context and settings authority.
         """
         self._resources = resource_manager
         self._sessions  = session_manager
@@ -38,10 +38,24 @@ class StreamManager:
         uri: str,
         session_context: SessionContext,
         as_sink: bool = False,
+        processors: Optional[List[MiddlewareProcessor]] = None
     ) -> StreamHandle:
         """
-        Requests a Smart Handle for a resource.
-        This is the primary entry point for context-aware I/O.
+        Requests an orchestrated Smart Handle for a resource.
+        
+        This is the primary entry point for context-aware I/O. It coordinates 
+        resolution, policy validation, settings resolution, and adapter 
+        instantiation.
+        
+        Args:
+            uri (str): The logical or physical resource address.
+            session_context (SessionContext): The passport for this execution.
+            as_sink (bool): Whether to open the stream for writing.
+            processors (Optional[List[MiddlewareProcessor]]): Initial 
+                transformations to attach to the handle.
+                
+        Returns:
+            StreamHandle: The ready-to-use dashboard and orchestrator.
         """
         # 1. RESOLVE & VALIDATE (What)
         coordinate = self._resources.resolve_resource(uri)
@@ -69,18 +83,15 @@ class StreamManager:
             **settings
         )
 
-        # 6. NEGOTIATE: Wrap in a Smart Handle
+        # 6. NEGOTIATE: Wrap in an Orchestrated StreamHandle
         return StreamHandle(
             adapter=adapter,
             capacity=adapter.capacity,
-            context=stream_context
+            context=stream_context,
+            processors=processors
         )
 
-    # --- Private Helpers ---
-
-    # (Removed _get_protocol_for_location as logic is now in ResourceManager)
-    
-    # --- Action Methods ---
+    # --- ACTION METHODS ---
 
     def read(self, uri: str, session_context: SessionContext) -> Iterator[Packet]:
         """
@@ -114,15 +125,6 @@ class StreamManager:
         registration = self._resources.get_registration(coordinate.protocol)
         return registration.adapter_cls.info(coordinate)
 
-    def wrap(self, handle: StreamHandle, processors: List[MiddlewareProcessor]) -> StreamHandle:
-        """
-        Orchestration: Decorates a Smart Handle with middleware processors.
-        """
-        # Inject the processors into the handle's adapter (The Wrapper Pattern)
-        # We assume the handle's context is preserved.
-        handle.inject_processors(processors)
-        return handle
-
     def delete(self, uri: str, session_context: SessionContext) -> bool:
         """
         CRUD: Removes a physical resource from the underlying medium.
@@ -139,13 +141,10 @@ class StreamManager:
         src_coord = self._resources.resolve_resource(src_uri)
         dest_coord = self._resources.resolve_resource(dest_uri)
         
-        # Policy checks for both source and destination
         self._resources.validate_policy(src_coord)
         self._resources.validate_policy(dest_coord)
         
-        # For now, we assume intra-adapter move
         if src_coord.protocol != dest_coord.protocol:
-            # Fallback to copy-and-delete for cross-protocol moves (Simplified)
             if self.copy(src_uri, dest_uri, session_context):
                 return self.delete(src_uri, session_context)
             return False
@@ -163,7 +162,6 @@ class StreamManager:
         self._resources.validate_policy(src_coord)
         self._resources.validate_policy(dest_coord)
         
-        # Cross-adapter copy (Read from source, Write to destination)
         if src_coord.protocol != dest_coord.protocol:
             try:
                 with self.get_handle(src_uri, session_context) as source:
@@ -186,13 +184,8 @@ class StreamManager:
         return registration.adapter_cls.exists(coordinate)
 
     def validate_resource(self, uri: str) -> bool:
-        """Performs a 'Dry Run' check."""
-        try:
-            coordinate = self.resolve(uri)
-            self._resources.validate_policy(coordinate)
-            return True
-        except (ValueError, KeyError, PermissionError, TypeError):
-            return False
+        """Performs a 'Dry Run' check via the identity subsystem."""
+        return self._resources.is_supported_uri(uri)
 
     # --- CONFIGURATION METHODS ---
 
@@ -200,56 +193,54 @@ class StreamManager:
         """
         Registers a physical anchor in the Resource Catalog.
         
-        :param key: The nickname/alias (e.g., 'scans').
-        :param protocol: The implementation protocol (e.g., 'posix', 'http').
-        :param anchor: The physical root (Path, URL, or raw string).
+        This method delegates to the identity subsystem authority.
         """
-        # 1. Promote raw anchor to a Coordinate
-        from src.app.domain.models.resource_identity import LocalCoordinate, NetworkCoordinate
-        
-        # 2. Get registration for the realm
-        registration = self._resources.get_registration(protocol)
-        
-        if registration.realm == Realm.LOCAL:
-            coordinate = LocalCoordinate(
-                path=str(anchor), 
-                protocol=protocol, 
-                key=ResourceKey(key)
-            )
-        elif registration.realm == Realm.NETWORK:
-            coordinate = NetworkCoordinate(url=str(anchor), key=ResourceKey(key))
-        else:
-            raise ValueError(f"Unsupported realm for manual registration: {registration.realm}")
+        self._resources.register_resource(key, protocol, anchor)
 
-        # 2. Delegate to the Resource Facade
-        self._resources.add_anchor(key=key, anchor=coordinate)
+    # --- MIDDLEWARE METHODS ---
 
-    # --- UTILITY METHODS ---
+    def wrap(self, handle: StreamHandle, processors: List[MiddlewareProcessor]) -> StreamHandle:
+        """
+        Orchestration: Decorates an existing handle with new processors.
+        """
+        for p in processors:
+            handle.add_processor(p)
+        return handle
+    
+    def validate_processors(self) -> None:
+        """Future: Ensures subject compatibility in a processor chain."""
+        pass
+
+    def get_available_processors(self) -> List[Dict[str, str]]:
+        """Future: Lists globally available processor blueprints."""
+        return []
+
+    # --- DISCOVERY & UTILITY BRIDGES ---
 
     def resolve(self, uri: str) -> Coordinate:
-        """Exposes the resolution logic."""
+        """Exposes the identity resolution logic."""
         return self._resources.resolve_resource(uri)
     
     def get_resources(self) -> Dict[str, Dict[str, str]]:
-        """"""
+        """Discovery: Returns a snapshot of the resource catalog."""
         return self._resources.get_resource_map()
     
-    def is_supported_uri(self, uri:str) -> bool:
-        """"""
+    def is_supported_uri(self, uri: str) -> bool:
+        """Discovery: Checks if a URI is supported."""
         return self._resources.is_supported_uri(uri)
     
     def is_supported_protocol(self, protocol: str) -> bool:
-        """"""
+        """Discovery: Checks if a protocol driver is loaded."""
         return self._resources.is_supported_protocol(protocol)
     
     def get_supported_protocols(self) -> List[str]:
-        """"""
+        """Discovery: Returns all supported protocols."""
         return self._resources.get_supported_protocols()
     
-    def has_resource(self, protocol:str, key:str) -> bool:
-        """"""
+    def has_resource(self, protocol: str, key: str) -> bool:
+        """Discovery: Checks for a specific registration."""
         return self._resources.has_resource(protocol, key)
 
-    def get_registered_adapter(self, protocol:str) -> str:
-        """"""
+    def get_registered_adapter(self, protocol: str) -> str:
+        """Discovery: Returns the adapter class name for a protocol."""
         return self._resources.get_registered_adapter(protocol)

@@ -19,9 +19,10 @@ class NetworkCoordinate(Coordinate):
     """
     Represents the verified network REALITY (URL)
     """
-    def __init__(self, url: str, key: Optional[ResourceKey] = None) -> None:
+    def __init__(self, url: str, protocol:str = "https", key: Optional[ResourceKey] = None) -> None:
         super().__init__(key)
         self._url = url
+        self._protocol = protocol
 
     @property
     def realm(self) -> Realm:

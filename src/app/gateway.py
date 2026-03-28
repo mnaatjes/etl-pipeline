@@ -1,5 +1,4 @@
 # src/app/gateway.py
-
 from typing import Optional, Dict, Any, Iterator, List
 from src.app.container import ServiceContainer
 from src.app.domain.models.packet import Packet
@@ -36,7 +35,6 @@ class Gateway:
         # 2. SESSION CONTEXT
         # Pull SessionManager from ServiceContainer
         # Build the initial context (Passport) for this gateway instance
-        
         session_manager = self._container.session_manager
         self._context   = session_manager.build_context(
             session_trace=trace_id, 
@@ -49,21 +47,47 @@ class Gateway:
 
     # --- STREAM OPERATIONS ---
 
-    def get_handle(self, uri: str, as_sink: bool = False, **overrides) -> StreamHandle:
-        """Requests a Smart Handle for advanced I/O."""
+    def get_handle(
+            self, uri: str, 
+            as_sink: bool = False, 
+            processors: Optional[List[MiddlewareProcessor]] = None, 
+            **overrides
+    ) -> StreamHandle:
+        """
+        Requests an orchestrated Smart Handle for a resource.
+        
+        Args:
+            uri (str): The logical or physical URI.
+            as_sink (bool): Whether to open the stream for writing.
+            processors (Optional[List[MiddlewareProcessor]]): Initial 
+                transformations to attach.
+            **overrides: Temporary call-level settings.
+            
+        Returns:
+            StreamHandle: The ready-to-use dashboard and orchestrator.
+        """
         # Refine call_context
         call_context = self._context.spawn(**overrides)
         # Return Handle with refined SessionContext
-        return self._manager.get_handle(uri, session_context=call_context, as_sink=as_sink)
+        return self._manager.get_handle(
+            uri, 
+            session_context=call_context, 
+            as_sink=as_sink,
+            processors=processors
+        )
     
     def read(self, uri: str, **overrides) -> Iterator[Packet]:
-        """Reads all packets from a URI using the gateway context."""
+        """
+        Reads all packets from a URI using the gateway context.
+        """
         # Refine call_context
         call_context = self._context.spawn(**overrides)
         return self._manager.read(uri, session_context=call_context)
 
     def write(self, uri: str, data: Any, **overrides) -> None:
-        """Writes data to a URI using the gateway context."""
+        """
+        Writes data to a URI using the gateway context.
+        """
         # Refine call_context
         call_context = self._context.spawn(**overrides)
         self._manager.write(uri, session_context=call_context, data=data)
@@ -134,7 +158,12 @@ class Gateway:
     # --- CONFIGURATION ---
 
     def add_resource(self, key: str, protocol: str, anchor: Any) -> None:
-        """Registers a physical anchor in the resource catalog."""
+        """
+        Registers a physical anchor in the resource catalog.
+        
+        Example:
+            >>> app.add_resource("scans", "posix", "/srv/data/scans")
+        """
         self._manager.add_resource(key=key, protocol=protocol, anchor=anchor)
 
     # --- UTILITY METHODS ---

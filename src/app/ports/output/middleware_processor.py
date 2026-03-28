@@ -48,7 +48,7 @@ class MiddlewareProcessor(ABC):
         """
         pass
 
-    @abstractmethod
+    #@abstractmethod
     def flush(self) -> Iterator[Packet]:
         """
         Drains internal buffers upon receiving a STREAM_END signal.

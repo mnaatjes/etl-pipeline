@@ -9,34 +9,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - **Discovery API (Gateway)**: Implemented a suite of high-level utility methods for framework inspection:
     - `get_resources()`: Returns a structured snapshot of all registered resource anchors and their security boundaries.
+    - `get_resource(key)`: Retrieves granular metadata for a single logical registration.
     - `get_protocols()`: Lists all technical protocols (drivers) currently supported by the framework.
     - `resolve(uri)`: Translates logical URIs into their physical, secured Coordinates for debugging and traceability.
     - `has_resource(key)`: Verifies if a specific logical anchor is registered.
     - `is_supported_uri(uri)`: Performs a "dry run" to check if the system can handle a specific address.
     - `is_supported_protocol(p)`: Confirms if a technical driver is loaded.
     - `get_registered_adapter(p)`: Identifies the adapter implementation class for a given protocol.
-- **Symmetric Delegation**: Established a consistent cross-layer pattern (Gateway -> StreamManager -> ResourceManager) for all discovery and metadata operations.
-- **Resource Catalog**: Added `get_snapshot()` to provide a structured "Join" between registered anchors and their security boundaries.
-- **StreamRegistry**: Added `get_all()` and `is_supported()` for technical protocol discovery.
+- **Middleware Subsystem (Localized Engine)**: Fully refactored transformations into a decoupled, stream-isolated model:
+    - `MiddlewareCatalog`: A localized registry for a specific stream's processors.
+    - `MiddlewareEngine`: An execution engine using depth-first recursion and functional chaining (`intercept`).
+    - `StreamHandle`: Now serves as the definitive **Composition Root**, orchestrating the handoff between Adapters and the Middleware Engine.
+- **Identity Subsystem**: Added `register_resource()` to the `ResourceManager` as a unified, high-level configuration entry point for physical anchors.
 
 ### Changed
-- **ResourceManager**: Renamed internal `is_supported()` to `is_supported_uri()` to differentiate from protocol-level support checks.
-- **Documentation**: Enhanced `Gateway` utility methods with verbose, example-rich docstrings for improved developer experience.
-
+- **Architectural Purity**: Successfully stripped all transformation logic from the `DataStream` port and infrastructure adapters (`PosixFileStream`, `HttpStream`).
+- **Symmetric Delegation**: Established a consistent cross-layer pattern (Gateway -> StreamManager -> ResourceManager) for all discovery and configuration operations.
+- **Documentation**: Enhanced all primary facades and models with verbose, example-rich docstrings.
 
 ### Fixed
-- **Leaky Middleware Abstractions**: Uncoupled the Middleware Processors from the DataStream, appended property to *StreamHandle* for processors, and added 
-    * Added `self._catalog` *MiddlwareCatalog* and `self._engine` *MiddlewareEngine* to *StreamHandle*
-    * Added `middleware` property to *StreamHandle* which returns contents of MiddlewareCatalog
-    * Added `list_processors()` method to *StreamHandle* which returns list of class-names of Middleware Processors assigned to the Streamhandle
-    * Removed `_processors` property and methods: `inject_processors()`, `_process_chain()`, `_flush_chain()`, and `_pipe_remaining()` from *DataStream*. Now managed by *MiddlewareEngine*
-    * Refactored *PosixFileAdapter* and *HttpAdapter* to remove Middleware aware methods and decouple
-    
+- **Identity Inconsistency**: Fixed a bug in Network resource registration where the protocol was not correctly propagated to the Coordinate.
+- **Leaky Middleware Abstractions**: Resolved the SRP violation where the `DataStream` port was responsible for transformation orchestration.
 
 ## [0.9.1]
 ### Added
-- **Documentation**: Updated d `docs/examples/` documentation
-- **Agents and Scripts**: Added local `.agents/` and `.scripts/` directories to manage development
+- **Documentation**: Updated `docs/examples/` documentation.
+- **Agents and Scripts**: Added local `.agents/` and `.scripts/` directories to manage development.
 
 ## [0.9.0]
 ### Added
@@ -47,19 +45,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Master Architecture Index**: Created a high-signal `docs/architecture/README.md` featuring the "3-Diagram Rule" (Structural Map, Golden Path Sequence, and Entity Genealogy).
 - **Specialized Provider Hierarchy**: Refactored the composition root into layered providers (`Config`, `Session`, `Identity`, `Stream`, `Pipeline`) for zero-redundancy dependency injection.
 - **Visual Test Suite**: Implemented unit tests for `SessionManager` using manual fakes and `rich.inspect` for real-time terminal tracing of object state.
-- **SessionContext:** Added `spawn()` method to merge `overrides` Dict property through system
+- **SessionContext:** Added `spawn()` method to merge `overrides` Dict property through system.
 
 ### Changed
 - **Architectural Naming Standard**: Renamed all "Orchestrator" facades to "Managers" (`ResourceManager`, `SessionManager`) to clarify their roles as subsystem caretakers.
 - **Documentation Consolidation**: Reorganized the `docs/` directory into conventional hierarchies, removing redundant "as-built" and "implementation" folders.
 - **StreamManager Refinement**: Fully refactored the `StreamManager` use-case to delegate "What" (Identity/Policy) to the `ResourceManager` and "How" (Settings/Context) to the `SessionManager`.
-- **Identity Registration:** Removed `ProtocolRegistration` dataclass and replaced with `AdapterBlueprint`
+- **Identity Registration:** Removed `ProtocolRegistration` dataclass and replaced with `AdapterBlueprint`.
 - Ret-conned versioning strategy to reflect the pre-Slalom experimental phase as `0.x.x`.
 - Consolidation of the identity refactor and session context work into the final alpha milestone.
 
 ### Fixed
-- **SessionContext:** Now carries `overrides` through system from `Gateway()` to call_level methods
-- **Adapters**: Refactored to accept ResourceIdentity types
+- **SessionContext:** Now carries `overrides` through system from `Gateway()` to call_level methods.
+- **Adapters**: Refactored to accept ResourceIdentity types.
 - **Registration Holes**: Closed the configuration gaps in `StreamManager.add_resource()` and implemented the delegation logic in `ResourceManager`.
 - **Lifecycle Management**: Implemented a robust `teardown` sequence in the `Bootstrap` class for graceful resource release.
 
