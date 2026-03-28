@@ -1,6 +1,7 @@
 # src/app/registry/streams.py
 from dataclasses import dataclass
 from src.app.domain.models.streams.adapter_blueprint import AdapterBlueprint
+from typing import Dict
 
 class StreamRegistry:
     def __init__(self):
@@ -19,3 +20,7 @@ class StreamRegistry:
     def is_supported(self, protocol:str) -> bool:
         """Helper to check if a protocol has a registered adapter"""
         return protocol in self._protocols
+
+    def get_all(self) -> Dict[str, AdapterBlueprint]:
+        """Returns the contents of the registry"""
+        return self._protocols

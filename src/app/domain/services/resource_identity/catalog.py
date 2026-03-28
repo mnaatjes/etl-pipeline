@@ -9,7 +9,7 @@ from src.app.domain.models.resource_identity import (
     Realm
 )
 from src.app.ports.input.resource_boundaries import ResourceBoundary
-
+from typing import Dict
 class ResourceCatalog:
     """
     The Domain Service responsible for resource discovery and security.
@@ -76,6 +76,17 @@ class ResourceCatalog:
         if isinstance(key, str):
             key = ResourceKey(key)
         return key in self._anchors
+    
+    def get_snapshot(self) -> Dict[str, Dict[str, str]]:
+        """Returns Structured Dict of Keys, anchors, protocols, and boundary classnames"""
+        return {
+            str(key): {
+                "anchor": str(coordinate),
+                "protocol": coordinate.protocol,
+                "boundary": self._boundaries[coordinate.protocol].__class__.__name__
+            }
+            for key, coordinate in self._anchors.items()
+        }
 
     def _get_anchor(self, key: ResourceKey) -> Coordinate:
         """Internal Helper: Retrieves authorized Coordinate root"""

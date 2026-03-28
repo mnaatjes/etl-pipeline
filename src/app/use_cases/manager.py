@@ -185,12 +185,6 @@ class StreamManager:
         registration = self._resources.get_registration(coordinate.protocol)
         return registration.adapter_cls.exists(coordinate)
 
-    # --- Discovery & Validation Methods ---
-
-    def resolve(self, uri: str) -> Coordinate:
-        """Exposes the resolution logic."""
-        return self._resources.resolve_resource(uri)
-
     def validate_resource(self, uri: str) -> bool:
         """Performs a 'Dry Run' check."""
         try:
@@ -200,7 +194,7 @@ class StreamManager:
         except (ValueError, KeyError, PermissionError, TypeError):
             return False
 
-    # --- Configuration Methods ---
+    # --- CONFIGURATION METHODS ---
 
     def add_resource(self, key: str, protocol: str, anchor: Any) -> None:
         """
@@ -229,3 +223,33 @@ class StreamManager:
 
         # 2. Delegate to the Resource Facade
         self._resources.add_anchor(key=key, anchor=coordinate)
+
+    # --- UTILITY METHODS ---
+
+    def resolve(self, uri: str) -> Coordinate:
+        """Exposes the resolution logic."""
+        return self._resources.resolve_resource(uri)
+    
+    def get_resources(self) -> Dict[str, Dict[str, str]]:
+        """"""
+        return self._resources.get_resource_map()
+    
+    def is_supported_uri(self, uri:str) -> bool:
+        """"""
+        return self._resources.is_supported_uri(uri)
+    
+    def is_supported_protocol(self, protocol: str) -> bool:
+        """"""
+        return self._resources.is_supported_protocol(protocol)
+    
+    def get_supported_protocols(self) -> List[str]:
+        """"""
+        return self._resources.get_supported_protocols()
+    
+    def has_resource(self, protocol:str, key:str) -> bool:
+        """"""
+        return self._resources.has_resource(protocol, key)
+
+    def get_registered_adapter(self, protocol:str) -> str:
+        """"""
+        return self._resources.get_registered_adapter(protocol)

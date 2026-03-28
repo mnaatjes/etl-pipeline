@@ -7,6 +7,7 @@ from src.app.use_cases.manager import StreamManager
 from src.app.use_cases.pipeline_runner import PipelineRunner
 from src.app.domain.services.session_context import SessionManager
 from src.app.domain.services.resource_identity import ResourceManager
+#from src.app.bootstrap import Bootstrap
 
 # Define a Generic Type Var
 T = TypeVar("T")

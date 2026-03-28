@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 ### Added
+- **Discovery API (Gateway)**: Implemented a suite of high-level utility methods for framework inspection:
+    - `get_resources()`: Returns a structured snapshot of all registered resource anchors and their security boundaries.
+    - `get_protocols()`: Lists all technical protocols (drivers) currently supported by the framework.
+    - `resolve(uri)`: Translates logical URIs into their physical, secured Coordinates for debugging and traceability.
+    - `has_resource(key)`: Verifies if a specific logical anchor is registered.
+    - `is_supported_uri(uri)`: Performs a "dry run" to check if the system can handle a specific address.
+    - `is_supported_protocol(p)`: Confirms if a technical driver is loaded.
+    - `get_registered_adapter(p)`: Identifies the adapter implementation class for a given protocol.
+- **Symmetric Delegation**: Established a consistent cross-layer pattern (Gateway -> StreamManager -> ResourceManager) for all discovery and metadata operations.
+- **Resource Catalog**: Added `get_snapshot()` to provide a structured "Join" between registered anchors and their security boundaries.
+- **StreamRegistry**: Added `get_all()` and `is_supported()` for technical protocol discovery.
+
+### Changed
+- **ResourceManager**: Renamed internal `is_supported()` to `is_supported_uri()` to differentiate from protocol-level support checks.
+- **Documentation**: Enhanced `Gateway` utility methods with verbose, example-rich docstrings for improved developer experience.
+
+
+### Fixed
+
+## [0.9.1]
+### Added
+- **Documentation**: Updated d `docs/examples/` documentation
+- **Agents and Scripts**: Added local `.agents/` and `.scripts/` directories to manage development
+
+## [0.9.0]
+### Added
 - **Slalom Branding Refactor**: Successfully transitioned the project to the "Slalom" brand, establishing a high-fidelity "Stream Orchestration Framework" identity.
 - **Gateway Entry Point**: Implemented the `Gateway` class as the primary Smart Gateway, abstracting complex IoC orchestration into a simple, professional API.
 - **SessionManager Facade**: Implemented a dedicated manager for the Session Context subsystem, handling Traceability (Passports) and the Settings "Waterfall."
@@ -21,17 +47,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Documentation Consolidation**: Reorganized the `docs/` directory into conventional hierarchies, removing redundant "as-built" and "implementation" folders.
 - **StreamManager Refinement**: Fully refactored the `StreamManager` use-case to delegate "What" (Identity/Policy) to the `ResourceManager` and "How" (Settings/Context) to the `SessionManager`.
 - **Identity Registration:** Removed `ProtocolRegistration` dataclass and replaced with `AdapterBlueprint`
+- Ret-conned versioning strategy to reflect the pre-Slalom experimental phase as `0.x.x`.
+- Consolidation of the identity refactor and session context work into the final alpha milestone.
 
 ### Fixed
 - **SessionContext:** Now carries `overrides` through system from `Gateway()` to call_level methods
 - **Adapters**: Refactored to accept ResourceIdentity types
 - **Registration Holes**: Closed the configuration gaps in `StreamManager.add_resource()` and implemented the delegation logic in `ResourceManager`.
 - **Lifecycle Management**: Implemented a robust `teardown` sequence in the `Bootstrap` class for graceful resource release.
-
-## [## [Unreleased]] - 2026-03-19
-### Changed
-- Ret-conned versioning strategy to reflect the pre-Slalom experimental phase as `0.x.x`.
-- Consolidation of the identity refactor and session context work into the final alpha milestone.
 
 ## [0.3.0] - 2026-03-04
 ### Added

@@ -4,6 +4,7 @@ from src.app.domain.services.resource_identity.factory import ResourceFactory
 from src.app.domain.services.resource_identity.catalog import ResourceCatalog
 from src.app.registry.streams import StreamRegistry, AdapterBlueprint
 from src.app.ports.input.resource_boundaries import ResourceBoundary
+from typing import Dict
 
 class ResourceManager:
     """
@@ -93,9 +94,9 @@ class ResourceManager:
         """
         self._catalog.register(protocol=protocol, boundary=boundary)
 
-    # --- Discovery Helpers ---
+    # --- UTILITY METHODS ---
 
-    def is_supported(self, uri: str) -> bool:
+    def is_supported_uri(self, uri: str) -> bool:
         """
         Determines if the system is capable of handling the given URI.
         """
@@ -104,3 +105,33 @@ class ResourceManager:
             return self._registry.is_supported(coordinate.protocol)
         except (ValueError, KeyError):
             return False
+    
+    def is_supported_protocol(self, protocol:str) -> bool:
+        """Returns StreamRegistry.is_supported()"""
+        return self._registry.is_supported(protocol)
+    
+    def get_resource_map(self) -> Dict[str, Dict[str, str]]:
+        """Returns ResourceCatalog.get_snapshot()"""
+        return self._catalog.get_snapshot()
+    
+    def has_resource(self, protocol:str, key:str) -> bool:
+        """Returns method ResourceCatalog.has_resource()"""
+        return self._catalog.has_resource(protocol, key)
+    
+    def get_registered_adapter(self, protocol: str) -> str:
+        """Returns Adapter Class-name from AdapterBlueprint"""
+        registration: AdapterBlueprint = self.get_registration(protocol)
+        return registration.adapter_cls.__class__.__name__
+    
+    def get_supported_protocols(self) -> list[str]:
+        """
+        Returns a list of all technical protocols registered in the system.
+        - Invokes StreamRegistry.get_all()"""
+        registrations = self._registry.get_all()
+        return list(registrations.keys())
+
+    
+    
+
+
+

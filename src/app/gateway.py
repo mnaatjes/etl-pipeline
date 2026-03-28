@@ -136,3 +136,118 @@ class Gateway:
     def add_resource(self, key: str, protocol: str, anchor: Any) -> None:
         """Registers a physical anchor in the resource catalog."""
         self._manager.add_resource(key=key, protocol=protocol, anchor=anchor)
+
+    # --- UTILITY METHODS ---
+
+    def resolve(self, uri: str) -> Coordinate:
+        """
+        Translates a logical URI into a secured physical Coordinate.
+        
+        This is the primary tool for verifying how logical resources (e.g., registry://)
+        map to physical reality (e.g., file://).
+        
+        Args:
+            uri (str): The logical or raw URI to resolve.
+            
+        Returns:
+            Coordinate: The physical address, validated and secured.
+            
+        Example:
+            >>> app.resolve("registry://scans/01.csv")
+            <Coordinate: posix:///srv/data/scans/01.csv>
+        """
+        return self._manager.resolve(uri)
+    
+    def get_resources(self) -> Dict[str, Dict[str, str]]:
+        """
+        Retrieves a complete snapshot of all registered resource anchors.
+        
+        Returns:
+            Dict[str, Dict[str, str]]: A map of nicknames to their physical root 
+                and security boundary information.
+                
+        Example:
+            >>> app.get_resources()
+            {'scans': {'anchor': 'file:///data', 'protocol': 'posix', 'boundary': 'PosixBoundary'}}
+        """
+        return self._manager.get_resources()
+    
+    def is_supported_uri(self, uri: str) -> bool:
+        """
+        Checks if the framework is capable of handling the given URI.
+        
+        This performs a 'dry run' of the identity resolution and driver discovery.
+        
+        Args:
+            uri (str): The URI to test.
+            
+        Returns:
+            bool: True if a driver and boundary are available for the URI.
+            
+        Example:
+            >>> app.is_supported_uri("http://example.com/data.json")
+            True
+        """
+        return self._manager.is_supported_uri(uri)
+    
+    def is_supported_protocol(self, protocol: str) -> bool:
+        """
+        Verifies if a technical protocol (driver) is registered in the system.
+        
+        Args:
+            protocol (str): The protocol name (e.g., 'posix', 's3', 'http').
+            
+        Returns:
+            bool: True if the protocol is supported by a registered adapter.
+            
+        Example:
+            >>> app.is_supported_protocol("posix")
+            True
+        """
+        return self._manager.is_supported_protocol(protocol)
+    
+    def get_supported_protocols(self) -> List[str]:
+        """
+        Returns a list of all technical protocols currently loaded in the framework.
+        
+        Returns:
+            List[str]: A list of protocol strings (e.g., ['posix', 'http']).
+            
+        Example:
+            >>> app.get_supported_protocols()
+            ['posix', 'http', 'memory']
+        """
+        return self._manager.get_supported_protocols()
+    
+    def has_resource(self, protocol: str, key: str) -> bool:
+        """
+        Checks if a specific resource key is registered under a protocol.
+        
+        Args:
+            protocol (str): The protocol the resource is expected to use.
+            key (str): The logical nickname/anchor key.
+            
+        Returns:
+            bool: True if the key is registered and ready for resolution.
+            
+        Example:
+            >>> app.has_resource("posix", "scans")
+            True
+        """
+        return self._manager.has_resource(protocol, key)
+    
+    def get_registered_adapter(self, protocol: str) -> str:
+        """
+        Retrieves the name of the adapter class registered for a protocol.
+        
+        Args:
+            protocol (str): The technical protocol to inspect.
+            
+        Returns:
+            str: The name of the adapter implementation class.
+            
+        Example:
+            >>> app.get_registered_adapter("posix")
+            'PosixFileStream'
+        """
+        return self._manager.get_registered_adapter(protocol)
