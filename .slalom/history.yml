@@ -1,0 +1,54 @@
+header:
+  id: "Session Summary and History Information"
+  purpose: "Lists previous Agent-Workflow session infomration and logs major tasks"
+  scope: "*"
+  version: "0.9.0"
+  project_name: Slalom
+  updated_at: "2026-04-22"
+  permissions: "read, write"
+
+directives:
+  - "Keep up-to-date"
+  - "Track most recent 3 sessions"
+  - "Order: most recent at top"
+  - "Each record should be reproduced from the properties: descriptions from below template"
+
+project_metadata:
+  name: "Slalom"
+  description: "ETL Pipeline Framework"
+  version: "0.9.0"
+  author: "Michael Naatjes"
+  github_project: "slalom-pipeline"
+  github_remote_repository: "https://github.com/mnaatjes/etl-pipeline.git"
+  updated_at: "2026-04-22"
+
+templates:
+  global_template:
+    architectural_milestones: "List of architectural implementations"
+    active_design_epics:
+      - id: "ADR-XXX"
+        title: "Template Title"
+        issue: "Github issue number, e.g. #44"
+        desc: "Short description"
+    resolved_conflicts:
+      - date: "YYYY-MM-DD"
+        issue: "Short description"
+        resolution: "Solution which solved issue"
+    
+  session_template:
+    - session_id: "<UUID>"
+      metadata:
+        timestamp: "YYYY-MM-DD HH-mm-ss"
+        version: "<current_projct_version>"
+        gemini_cli_session_id: "Leave blank. User will populate after session closed in cli"
+      tasks:
+        accomplished: "List of accomplishments"
+        todo: "List of items left to accomplish"
+      bug_report:
+        - bug_id: "<short title>"
+          location: "<filepath>"
+          problem: "Short description"
+          expected: "Expected behavior or output"
+      git:
+        branches_affected: []
+        issues_affected: []

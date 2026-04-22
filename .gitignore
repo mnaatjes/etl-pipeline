@@ -41,9 +41,12 @@ data/
 # Refactoring
 __src/
 docs/branding/
+_scratch
 
 # Utilities
 .agents
 .scripts
 .gemini
-.slalom
+
+# Depreciated
+_archive

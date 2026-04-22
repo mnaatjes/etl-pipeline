@@ -1,0 +1,22 @@
+header:
+  version: "0.9.0"
+  project_name: Slalom
+  id: "Agentic Operation"
+  purpose: "Resource of directives for Agentic behavior and workflow integration"
+  updated_at: "2026-04-22"
+  permissions: "readonly"
+  scope: "*"
+proceedural_modes:
+  - name: Guided Implementation
+    directive: "The AI explains the logic and provides code snippets; the User executes the changes."
+  - name: Architectural Review
+    directive: "The User provides a plan or code; the AI validates it against the Code of Laws."
+behavioral_modes:
+  - name: Placeholder
+    directive: ""
+content_modes:
+  - name: Depreciated Materials
+    directives: 
+      - "Depreciated materials should be placed in `_archive` directory"
+      - "Ignore `_archive` directory in searches, synthesis, analysis, and context-hydration"
+      - "Files in `_archive` are depreciated and therefore unreliable"

@@ -1,0 +1,81 @@
+header:
+  id: "Documentation Ruleset"
+  purpose: "Defines documentation rules and workflows"
+  scope: "docs/"
+  version: "0.9.0"
+  project_name: Slalom
+  updated_at: "2026-04-22"
+  permissions: "readonly"
+
+global_documentation_rules:
+  framework: "Diátaxis"
+  description: "Documentation is organized into four distinct quadrants based on user needs."
+  directives:
+    - "Anti-Placeholder Mandate: NEVER use '...', '[Rest of content stays the same]', or any other elision markers when writing files. If a file is too large for a full write_file, use the replace tool with high-context anchors."
+    - "Verify Before Overwrite: Before using write_file on an existing document, the agent MUST read_file to capture the current state. This ensures that manually added updates or frontmatter changes are not lost."
+    - "Explicit Diff Declaration: When proposing an update, the agent should summarize what is being removed vs. what is being added to allow for human verification of intent."
+    - "Atomic Append for Logs: Use 'cat >>' via run_shell_command for purely additive logs or session trackers to avoid race conditions and content erasure."
+    - "ALL markdown documentation should have frontmatter that adheres to the schema in this document"
+
+conflict_resolution_directives:
+  redundancy_check:
+    trigger: "Before drafting a new TDD or ADR."
+    action: "Scan docs/explanation/design/ and docs/explanation/reports/adr/ for files with overlapping 'component', 'id', or conceptual scope."
+  resolution_protocol:
+    rule: "ALWAYS present detected conflicts in the terminal with reference numbers for human-in-the-loop approval. The agent MUST NOT autonomously consolidate or delete without explicit confirmation."
+  anti_drift_policy:
+    rule: "DO NOT rely solely on 'newest' timestamps or sequential ID numbers for consolidation; priority must be given to conceptual accuracy as verified by the human operator to prevent Agent-Drift."
+
+quadrants:
+  tutorials:
+    path: "docs/tutorials/"
+    orientation: "Learning-oriented (Lessons for the beginner)"
+  how_to_guides:
+    path: "docs/how-to/"
+    orientation: "Task-oriented (Steps for the practitioner)"
+  explanation:
+    path: "docs/explanation/"
+    orientation: "Understanding-oriented (Discussions for the co-worker)"
+    sub_directories:
+      - "docs/explanation/architecture/"
+      - "docs/explanation/design/"
+      - "docs/explanation/reports/adr/"
+      - "docs/explanation/reports/status/"
+      - "docs/explanation/terminology/"
+  reference:
+    path: "docs/reference/"
+    orientation: "Information-oriented (Descriptions for the specialist)"
+
+standard_operating_procedures:
+  location: "All documentation must reside in /docs."
+  format: "Markdown (.md) using kebab-case naming."
+  archiving: "Deprecated documents move to docs/_archive/ with status updated to 'deprecated'."
+  enforcement: "Updates required for all architecturally significant changes."
+  adr_addenda_workflow:
+    - "Atomic Appending: Use 'cat >>' via shell to safely append to the end of the file, avoiding replacement errors."
+    - "Historical Integrity: Always use a '## Addendum (YYYY-MM-DD)' header to preserve the original adopted decision."
+    - "Contextual Mapping: Ensure clarifications are appended to the specific ADR document most relevant to the rule."
+    - "Frontmatter Maintenance: The 'updated_at' field in the ADR's frontmatter MUST be updated to the current timestamp when an addendum is added."
+    - "Strict Scoping: Only modify the specific ADR file(s) explicitly referenced in the review or inquiry."
+
+frontmatter_schema:
+  base_required:
+    - id           # Unique ID (e.g., ADR-011, REF-WAGON)
+    - title        # Clear, concise heading
+    - status       # draft | proposed | stable | deprecated
+    - created_at   # YYYY-MM-DD
+    - updated_at   # YYYY-MM-DD
+    - component    # core | engine | ui | domain:<name>
+    - type         # Diátaxis quadrant
+  directives:
+    - "ALL markdown documentation should have frontmatter"
+    - "Ensure frontmatter is kept up-to-date during edits and updates"
+  
+  adr_extensions:
+    - epic_link    # Link to GH Epic (Use 'PENDING' if not yet created)
+    - type: "explanation/adr"
+
+  tdd_extensions:
+    - parent_adr   # Link to ADR-XXX
+    - feature_link # Link to GH Issue (Use 'PENDING' if not yet created)
+    - type: "explanation/design"
