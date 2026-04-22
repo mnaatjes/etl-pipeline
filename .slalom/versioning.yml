@@ -1,0 +1,33 @@
+# .agents/versioning.agent.yml
+project:
+  name: "slalom-versioning"
+  description: "Standards and workflows for version management, releases, and changelog maintenance."
+
+# Versioning Logic
+strategy:
+  type: "Semantic Versioning (SemVer)"
+  format: "X.Y.Z"
+  definitions:
+    X: "Major: Breaking public API changes."
+    Y: "Minor: New features, non-breaking architectural shifts."
+    Z: "Patch: Bug fixes, documentation updates, internal refactors."
+
+# Workflow Mechanics
+release_process:
+  - "Step 1: Finalize content in [Unreleased] section of CHANGELOG.md."
+  - "Step 2: Bump version in src/__init__.py."
+  - "Step 3: Update version metadata in .scripts/compile_manifest.py."
+  - "Step 4: Run compiler to synchronize .agents/MANIFEST.json."
+  - "Step 5: Tag git repository with vX.Y.Z."
+
+# Policies
+directives:
+  - "SSoT Sync: Every version bump must be reflected in the MANIFEST.json metadata immediately."
+  - "Changelog Purity: The CHANGELOG.md is a user-facing document. Exclude internal agentic/tooling updates (e.g., .agents/ or .scripts/ changes) unless they impact the developer experience."
+  - "Single Source: src/__init__.py is the source of truth for the version string."
+
+# Reference Documentation
+documentation:
+  files: ["docs/architecture/standards/versioning.md", "CHANGELOG.md"]
+  glossary:
+    Unreleased: "The staging area for the next version's changelog entries."

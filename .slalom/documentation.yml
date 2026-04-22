@@ -1,0 +1,194 @@
+header:
+  id: "Documentation Ruleset"
+  purpose: "Defines documentation rules and workflows"
+  scope: "docs/"
+  version: "0.9.0"
+  project_name: Slalom
+  updated_at: "2026-04-22"
+  permissions: "readonly"
+
+global_documentation_rules:
+  framework: "Diátaxis"
+  description: "Documentation is organized into four distinct quadrants based on user needs."
+  directives:
+    - "Anti-Placeholder Mandate: NEVER use '...', '[Rest of content stays the same]', or any other elision markers when writing files. If a file is too large for a full write_file, use the replace tool with high-context anchors."
+    - "Verify Before Overwrite: Before using write_file on an existing document, the agent MUST read_file to capture the current state. This ensures that manually added updates or frontmatter changes are not lost."
+    - "Explicit Diff Declaration: When proposing an update, the agent should summarize what is being removed vs. what is being added to allow for human verification of intent."
+    - "Atomic Append for Logs: Use 'cat >>' via run_shell_command for purely additive logs or session trackers to avoid race conditions and content erasure."
+    - "ALL markdown documentation should have frontmatter that adheres to the schema in this document"
+
+conflict_resolution_directives:
+  redundancy_check:
+    trigger: "Before drafting a new ADR and/or TDD."
+    action: "Scan docs/explanation/design/ and docs/explanation/reports/adr/ for files with overlapping 'component', 'id', or conceptual scope."
+  resolution_protocol:
+    rule: "ALWAYS present detected conflicts in the terminal with reference numbers for human-in-the-loop approval. The agent MUST NOT autonomously consolidate or delete without explicit confirmation."
+  anti_drift_policy:
+    rule: "DO NOT rely solely on 'newest' timestamps or sequential ID numbers for consolidation; priority must be given to conceptual accuracy as verified by the human operator to prevent Agent-Drift."
+
+quadrants:
+  tutorials:
+    path: "docs/tutorials/"
+    orientation: "Learning-oriented (Lessons for the beginner)"
+  how_to_guides:
+    path: "docs/how-to/"
+    orientation: "Task-oriented (Steps for the practitioner)"
+  explanation:
+    path: "docs/explanation/"
+    orientation: "Understanding-oriented (Discussions for the co-worker)"
+    sub_directories:
+      - "docs/explanation/architecture/"
+      - "docs/explanation/design/"
+      - "docs/explanation/design/tdd/"
+      - "docs/explanation/reports/"
+      - "docs/explanation/reports/adr/"
+      - "docs/explanation/reports/aar/"
+  reference:
+    path: "docs/reference/"
+    orientation: "Information-oriented (Descriptions for the specialist)"
+
+standard_operating_procedures:
+  location: "All documentation must reside in /docs."
+  format: "Markdown (.md) using kebab-case naming."
+  archiving: "Deprecated documents move to docs/_archive/ with status updated to 'deprecated'."
+  enforcement: "Updates required for all architecturally significant changes."
+  adr_addenda_workflow:
+    - "Atomic Appending: Use 'cat >>' via shell to safely append to the end of the file, avoiding replacement errors."
+    - "Historical Integrity: Always use a '## Addendum (YYYY-MM-DD)' header to preserve the original adopted decision."
+    - "Contextual Mapping: Ensure clarifications are appended to the specific ADR document most relevant to the rule."
+    - "Frontmatter Maintenance: The 'updated_at' field in the ADR's frontmatter MUST be updated to the current timestamp when an addendum is added."
+    - "Strict Scoping: Only modify the specific ADR file(s) explicitly referenced in the review or inquiry."
+
+major_documenation_types:
+  # Architectural Decision Record
+  - ADR:
+    description: "Propose and document strategic architectural decisions impacting the project's 'Laws of Physics'."
+    objective: "Create a permanent, traceable record of architectural choices linked to administrative Epics for long-term governance."
+    directives:
+      - evidence_based: "All proposals must be preceded by a codebase_investigator scan to validate the current state."
+      - immutable_id: "Once an ADR_ID (XXX) - e.g. 002 - is assigned, it must remain static to prevent broken internal references."
+      - administrative_lock: "The document is not considered 'Final' until the GitHub Epic URL is injected into the frontmatter."
+    workflow:
+      - 1: "Identification and Research"
+        description: "Detect architectural friction and validate the necessity of a change."
+        scopes:
+          - codebase: "Analyze /src for patterns that conflict with the proposed change."
+          - dependency_graph: "Identify downstream impacts of the decision."
+          - precedent: "Check existing ADRs in docs/explanation/reports/adr/ for conflicting 'Laws of Physics'."
+        action: "Execute codebase_investigator and compile a list of validated assumptions and technical constraints."
+      - 2: "Drafting and Initialization"
+        description: "Initialize the Markdown file with required metadata and frontmatter."
+        action: "Create the file with 'status: proposed' and 'epic_link: PENDING' at the target path."
+      - 3: "Administrative Traceability"
+        description: "Establish the 'Chain of Custody' via external project tracking."
+        action: "Generate a GitHub Epic Issue, assign to the Oregon Trail Project, and retrieve the URL."
+      - 4: "Synthesis and Finalization"
+        description: "Close the traceability loop and finalize the architectural narrative."
+        format: "markdown"
+        naming_convention: "<ADR_ID>_<topic_title>"
+        diataxis_placement: "docs/explanation/reports/adr/"
+        structure:
+          1: "Frontmatter (Injection of Epic URL and ID)"
+          2: "Context and Problem Statement"
+          3: "Decision Drivers"
+          4: "Proposed Solution"
+          5: "Consequences (Trade-offs)"
+        action: "Update 'updated_at' and replace 'PENDING' with the validated GitHub Epic link."
+
+  # Technical Design Documentation
+  - TDD:
+    description: "Technical Design Documentation (TDD) acts as the bridge between abstract ADRs and concrete code implementation."
+    objective: "Standardize the translation of high-level architectural decisions into actionable, diagrammed blueprints while maintaining a chain of custody."
+    directives:
+      - adr_ancestry: "Every TDD must reference a parent ADR to justify its architectural existence."
+      - diagram_mandate: "Proposed designs must include Mermaid diagrams to visualize logic and data flow."
+      - boundary_discipline: "Explicitly define Non-Goals to prevent scope creep during implementation."
+      - contract_first: "Detailed designs must specify interfaces and data schemas before code is written."
+    workflow:
+      - 1: "Context Ingestion and Alignment"
+        description: "Analyze the parent ADR and the current codebase to ensure the design fits existing 'Laws of Physics'."
+        scopes:
+          - parent_adr: "Review the decision drivers and constraints in the referenced ADR."
+          - technical_constraints: "Evaluate hardware (HP ProDesk/Dell OptiPlex) or OS (Debian/Ubuntu) limitations."
+        action: "Cross-reference the parent ADR and identify the specific component (core, engine, ui, or domain) for implementation."
+      - 2: "Architectural Modeling"
+        description: "Develop the visual and structural logic of the proposed feature."
+        action: "Generate Mermaid.js diagrams for sequence and class structures; define Pydantic-style data schemas or Hexagonal ports/adapters."
+      - 3: "Drafting and Linking"
+        description: "Initialize the TDD file with the mandatory 'Chain of Custody' frontmatter."
+        action: "Create the markdown file with id, parent_adr, and feature_link (GitHub Issue URL)."
+      - 4: "Technical Synthesis"
+        description: "Finalize the blueprint for implementation."
+        format: "markdown"
+        naming_convention: "TDD_XXX_feature_name.md"
+        diataxis_placement: "docs/explanation/design/tdd/"
+        structure:
+          1: "Frontmatter (ID, Parent ADR, Feature Link)"
+          2: "Overview"
+          3: "Goals & Non-Goals"
+          4: "Proposed Design (Mermaid Diagrams)"
+          5: "Detailed Design (Data Schema, Interfaces)"
+        action: "Ensure all 'Detailed Design' components are precise enough for an agent to generate code boilerplate from."
+
+  # After Action Review
+  - AAR:
+    description: ""
+    objective: ""
+    directives:
+      - evidence_based: "Every claim must be supported by commit hashes, test logs, or specific documentation lines."
+      - actionable_output: "The end goal is a modification to the project mandate or workflow, not just a summary."
+      - bureaucratic_precision: "Maintain strict adherence to the defined schema and pathing."
+    workflow: 
+      - 1: "Information Gathering"
+        description: "Scan and ingest project state within a defined scope."
+        scopes:
+          - code: "Inspect /src for architectural drift and implementation patterns."
+          - documentation: "Evaluate /docs for parity between instructions and reality."
+          - tests: "Review /tests for coverage gaps and failure modes."
+          - logs: "Analyze CI/CD outputs and runtime telemetry."
+        action: "Extract 'Intended vs. Actual' data points from Git history and ticket metadata."
+      - 2: "Entity Interrogation"
+        description: "Systematic questioning of project components."
+        questions:
+          - "Which specific architectural mandate was most difficult to satisfy? Why?"
+          - "Where did anti-patterns appear? What are they?"
+          - "Where was the Single-Responsibility Principle violated?"
+          - "Where did Hexagonal Boundaries blur? How?"
+          - "Where did implementation deviate from documentation? Why?"
+      - 3: "Synthesis"
+        description: "Transform gathered data into the AAR markdown report"
+        format: "markdown"
+        naming_convention: "YYYY-MM-DD_[SCOPE]_[MILESTONE].md"
+        diataxis_placement: "docs/explanation/reports/aar/"
+        structure:
+          1: "Executive Summary"
+          2: "Original Objectives (The Mandate)"
+          3: "Actual Results (The Reality)"
+          4: "Analysis of the Gap (The Why)"
+          5: "Corrective Actions (The Future)"
+
+frontmatter_schema:
+  base_required:
+    - id           # Unique ID (e.g., ADR-011, REF-WAGON)
+    - title        # Clear, concise heading
+    - status       # draft | proposed | stable | deprecated
+    - created_at   # YYYY-MM-DD
+    - updated_at   # YYYY-MM-DD
+    - component    # core | engine | ui | domain:<name>
+    - type         # Diátaxis quadrant
+  directives:
+    - "ALL markdown documentation should have frontmatter"
+    - "Ensure frontmatter is kept up-to-date during edits and updates"
+  
+  adr_extensions:
+    - epic_link    # Link to GH Epic (Use 'PENDING' if not yet created)
+    - type: "explanation/adr"
+
+  tdd_extensions:
+    - parent_adr   # Link to ADR-XXX
+    - feature_link # Link to GH Issue (Use 'PENDING' if not yet created)
+    - type: "explanation/design"
+
+  arr_extensions:
+    - assoc_ads: []
+    - assoc_tdds: []

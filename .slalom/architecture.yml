@@ -1,0 +1,16 @@
+header:
+  version: "0.9.0"
+  project_name: Slalom
+  id: "Project Architecture"
+  purpose: "Define project-wide architectural guidelines"
+  scope: "*"
+  updated_at: "2026-04-22"
+  permissions: "readonly"
+# Main Directives for entire project scope
+principles:
+  - name: Hexagonal Architecture (Ports & Adapters)
+    directive: "Isolate business logic from infrastructure. Engines (pipeline) are adapters; Core Blueprints are the domain."
+  - name: Architecture Governance
+    directives:
+      - "Architecture changes must be preceded by an ADR in docs/design/adr/."
+      - "Technical Design Documents (TDD) will be generated for detailed design plans and implementations"
