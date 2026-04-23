@@ -1,4 +1,4 @@
-# .agents/versioning.agent.yml
+# .slalom/versioning.yml
 project:
   name: "slalom-versioning"
   description: "Standards and workflows for version management, releases, and changelog maintenance."
@@ -16,18 +16,15 @@ strategy:
 release_process:
   - "Step 1: Finalize content in [Unreleased] section of CHANGELOG.md."
   - "Step 2: Bump version in src/__init__.py."
-  - "Step 3: Update version metadata in .scripts/compile_manifest.py."
-  - "Step 4: Run compiler to synchronize .agents/MANIFEST.json."
-  - "Step 5: Tag git repository with vX.Y.Z."
+  - "Step 3: Tag git repository with vX.Y.Z."
 
 # Policies
 directives:
-  - "SSoT Sync: Every version bump must be reflected in the MANIFEST.json metadata immediately."
-  - "Changelog Purity: The CHANGELOG.md is a user-facing document. Exclude internal agentic/tooling updates (e.g., .agents/ or .scripts/ changes) unless they impact the developer experience."
   - "Single Source: src/__init__.py is the source of truth for the version string."
+  - "Changelog Purity: The CHANGELOG.md is a user-facing document."
 
 # Reference Documentation
 documentation:
-  files: ["docs/architecture/standards/versioning.md", "CHANGELOG.md"]
+  files: ["CHANGELOG.md"]
   glossary:
     Unreleased: "The staging area for the next version's changelog entries."
