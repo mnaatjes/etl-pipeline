@@ -6,7 +6,7 @@ created_at: 2026-04-23
 updated_at: 2026-04-23
 component: core
 type: "explanation/adr"
-epic_link: PENDING
+epic_link: "https://github.com/mnaatjes/etl-pipeline/issues/13"
 ---
 
 # Context
@@ -20,57 +20,52 @@ The current system suffers from:
 
 # Decision
 
-We will "Rebirth" the system by stripping away the bureaucratic layers and identity framework, focusing exclusively on a high-performance, functional ETL core. 
+We will "Rebirth" the system by stripping away the bureaucratic layers and identity framework, building a high-performance, functional ETL core from the ground up. All previous v0.9.0 code has been removed; this is a greenfield implementation.
 
 ### Key Transitions:
-- **Flattened Orchestration:** Replace the multi-manager hierarchy with a single functional orchestrator and a simplified entry point.
-- **Contract Modernization:** Move from manual `StreamContract` type-guarding to standard Python library or Pydantic-based validation.
-- **Native Identity:** Replace the custom 11-file identity subsystem with standard library URI and Path parsing.
-- **Session Collapse:** Reduce the `SessionContext` service hierarchy to a simple, traceable settings dictionary.
+- **Flattened Orchestration:** A single functional orchestrator and a simplified entry point.
+- **Contract Modernization:** Native Pydantic-based validation.
+- **Standard Library Identity:** Utilization of standard URI and Path parsing.
+- **Session Simplicity:** A simple, traceable settings dictionary.
 
-# Retained Components (The Functional Core)
+# Target Functional Core (Re-implementation Requirements)
 
-The following high-value entities and logic will be salvaged and migrated to the new architecture:
+The following high-value patterns and functional requirements from previous iterations will be built fresh in the new architecture:
 
 1. **The "Smart Unit of Work" (Packet Models):**
-   - `Packet` Model (`src/app/domain/models/packet/base.py`): Immutable dataclass with lineage-aware `spawn()`.
-   - `FlowSignal` & `Completeness` (`src/app/domain/models/packet/flow.py`): For end-of-stream (Flush) signals.
-   - `PayloadSubject` (`src/app/domain/models/packet/payload.py`): Shared vocabulary (BYTES, JSON, DICT).
+   - Immutable `Packet` Model with parent-child correlation tracking (`spawn()`).
+   - `FlowSignal` & `Completeness` for stream lifecycle (Start, Data, End/Flush).
+   - `PayloadSubject` shared vocabulary (BYTES, JSON, DICT).
 
 2. **The Functional Chaining (Middleware Engine):**
-   - `MiddlewareEngine` (`src/app/domain/models/middleware/engine.py`): Recursive transformation logic and iterator interception.
-   - Flush Mechanism: Ensuring stateful processors (aggregators) clear buffers.
+   - A generator-based transformation engine using recursive logic.
+   - Mandated flush mechanism for stateful processors (aggregators).
 
 3. **Physical Streaming I/O:**
-   - `HttpStream` Adapter (`src/infrastructure/adapters/http/adapter.py`): `httpx`-based streaming strategies.
-   - `PosixFileStream` Adapter (`src/infrastructure/adapters/posix_file/adapter.py`): Core I/O loop and directory management.
-   - `DataStream` Port (`src/app/ports/output/datastream.py`): Standard I/O contract.
+   - Standardized `DataStream` Port for all I/O.
+   - `HttpStream` and `PosixFileStream` implementations using professional streaming libraries.
 
-4. **High-Performance Processors:**
-   - `JsonStreamProcessor` (Streaming ijson parser).
-   - `GzipDecompressor` (Streaming zlib decompression).
-   - `ChecksumProcessor` (Pass-through hash calculation).
+4. **Essential Processors:**
+   - Streaming JSON parsing (Regime Changer).
+   - Streaming GZIP decompression.
+   - Real-time checksum/hash calculation.
 
 5. **Developer Experience:**
-   - `PipelineBuilder` (`src/app/use_cases/pipeline_builder.py`): Fluent DSL syntax and contract adjudication.
+   - A Fluent DSL (PipelineBuilder) for building type-safe transformation chains.
 
-6. **Context Passport:**
-   - `StreamContext` (`src/app/domain/models/streams/stream_context.py`): Lightweight origin and trace tracking.
+# Discarded Concepts (Non-Goals)
 
-# Discarded Components (The "Mess")
-
-- `src/app/domain/models/resource_identity/**`: Entire subsystem removed in favor of standard URI parsing.
-- `src/app/domain/services/session_context/**`: Hierarchy collapsed.
-- `src/app/providers/**`: Two-phase bootloading removed.
-- `src/app/gateway.py` & `src/app/container.py`: Bureaucratic layers removed.
+- **Custom Identity Modeling:** No manual tracking of Addresses or Coordinates.
+- **Manager-Facade Chains:** No quadruple-layered delegation.
+- **Two-Phase Bootloading:** No complex IoC provider hierarchy.
 
 # Consequences
 
 ### Positive
-- **Reduced Cognitive Complexity:** Developers can understand the path from `read()` to `write()` without navigating four managers.
-- **Improved Performance:** Lower overhead per packet by eliminating redundant transformation/validation layers.
-- **Easier Maintenance:** Smaller codebase focused on the core ETL mission.
+- **Drastic Complexity Reduction:** Zero technical debt carryover.
+- **Improved Performance:** Minimal overhead between raw I/O and user logic.
+- **Standardization:** Heavy reliance on industry-standard libraries (`fsspec`, `pydantic`).
 
 ### Negative
-- **Breaking Change:** This represents a full system rebirth; existing client code using the `Gateway` or `ResourceManager` will require migration.
-- **Manual Migration:** Existing adapters and processors must be surgically moved to the new structure.
+- **Full Re-implementation:** All core logic must be written fresh to ensure alignment with new standards.
+- **Breaking API:** Complete lack of backward compatibility with legacy Slalom scripts.

@@ -3,14 +3,14 @@ id: HT-GIT-CONVENTIONS
 title: "How to Use Git and GitHub Conventions"
 status: stable
 created_at: 2026-04-17
-updated_at: 2026-04-17
+updated_at: 2026-04-23
 component: core
 type: how-to
 ---
 
 # How to Use Git and GitHub Conventions
 
-Follow these steps to ensure your source control history adheres to the **Law of Provenance** and **Conventional Commits**.
+Follow these steps to ensure your source control history for Slalom ETL-Pipeline adheres to the **Law of Provenance** and **Conventional Commits**.
 
 ## 1. Branching Strategy
 Always start from a clean and updated `main` branch.
@@ -24,14 +24,14 @@ git pull origin main
 ### Step 2: Create a Typed Branch
 Use the naming convention: `type/ISS-ID-short-description`
 
-*   **feat/**: Features (`feat/102-health-logic`)
-*   **fix/**: Bugs (`fix/205-inventory-overflow`)
-*   **docs/**: Documentation (`docs/ADR-013-event-schema`)
-*   **refactor/**: Refactoring (`refactor/core-di`)
-*   **police/**: CI/Tests (`police/linting-rules`)
+*   **feat/**: Features (`feat/101-fsspec-resolver`)
+*   **fix/**: Bugs (`fix/201-retry-logic`)
+*   **docs/**: Documentation (`docs/ADR-001-lean-core`)
+*   **refactor/**: Refactoring (`refactor/flatten-domain`)
+*   **police/**: CI/Tests (`police/fitness-functions`)
 
 ```bash
-git checkout -b feat/102-damage-metabolism
+git checkout -b feat/101-fsspec-integration
 ```
 
 ## 2. The Commit Handshake
@@ -42,7 +42,7 @@ We use **Conventional Commits** appended with the Issue ID.
 
 ### Example
 ```bash
-git commit -m "feat(health): implement damage metabolism logic (#102)"
+git commit -m "feat(core): implement fsspec unified resolver (#101)"
 ```
 
 ### Common Types:
@@ -62,13 +62,13 @@ git push origin <branch-name>
 ```
 
 ### Step 2: Open Pull Request
-1.  Go to GitHub and click **Compare & pull request**.
-2.  **Title:** Match your commit message (e.g., `feat(health): implement damage metabolism logic (#102)`).
-3.  **Description:** Use the keyword `Closes #102` to automatically close the task on the ledger.
+1.  Go to the [Slalom ETL-Pipeline Repository](https://github.com/mnaatjes/etl-pipeline.git) and click **Compare & pull request**.
+2.  **Title:** Match your commit message (e.g., `feat(core): implement fsspec unified resolver (#101)`).
+3.  **Description:** Use the keyword `Closes #101` to automatically close the task on the ledger.
 4.  **TDD Link:** Provide a link to the TDD being implemented.
 
 ### Step 3: Squash and Merge
-1.  Wait for the **Architectural Police** (CI checks) to pass.
+1.  Wait for the **Architectural Police** (CI checks / Fitness Functions) to pass.
 2.  Click the arrow next to "Merge pull request" and select **Squash and merge**.
 3.  Ensure the final commit message includes the Issue ID.
 

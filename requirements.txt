@@ -1,6 +1,6 @@
 pytest
 pytest-mock
-pydantic
+pydantic>=2.0.0
 pydantic-settings
 psutil
 requests
@@ -9,3 +9,8 @@ respx
 bump2version
 rich
 ijson
+fsspec
+pytest-archon
+structlog
+more-itertools
+typeguard

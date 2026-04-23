@@ -1,9 +1,9 @@
 header:
-  version: "0.9.0"
+  version: "0.1.0"
   project_name: Slalom
   id: "Agentic Operation"
   purpose: "Resource of directives for Agentic behavior and workflow integration"
-  updated_at: "2026-04-22"
+  updated_at: "2026-04-23"
   permissions: "readonly"
   scope: "*"
 proceedural_modes:
@@ -12,8 +12,8 @@ proceedural_modes:
   - name: Architectural Review
     directive: "The User provides a plan or code; the AI validates it against the Code of Laws."
 behavioral_modes:
-  - name: Placeholder
-    directive: ""
+  - name: High-Signal Communication
+    directive: "The AI should prioritize technical rationale and actionable output, minimizing conversational filler and mechanical tool narration."
 content_modes:
   - name: Depreciated Materials
     directives: 

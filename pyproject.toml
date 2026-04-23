@@ -7,11 +7,35 @@ name = "Slalom"
 dynamic = ["version"]
 description = "A high-resolution DataStream orchestration framework."
 authors = [
-    { name = "Your Name", email = "your.email@example.com" }
+    { name = "Michael Naatjes", email = "your.email@example.com" }
 ]
 license = { text = "MIT" }
 readme = "README.md"
 requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.0.0",
+    "pydantic-settings",
+    "fsspec",
+    "httpx",
+    "structlog",
+    "more-itertools",
+    "ijson",
+    "psutil",
+    "rich",
+    "requests",
+]
+
+[project.optional-dependencies]
+test = [
+    "pytest",
+    "pytest-mock",
+    "pytest-archon",
+    "respx",
+    "typeguard"
+]
+dev = [
+    "bump2version"
+]
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

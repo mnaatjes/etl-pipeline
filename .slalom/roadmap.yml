@@ -1,0 +1,43 @@
+header:
+  version: "0.1.0"
+  project_name: Slalom
+  id: "Implementation Roadmap"
+  purpose: "Define the Outside-In development sequence for the functional core"
+  scope: "src/app/core/, src/app/ports/"
+  updated_at: "2026-04-23"
+  permissions: "readonly"
+
+strategy:
+  methodology: "Outside-In Design"
+  description: "Prioritize Gateway ergonomics and internal contracts before building physical infrastructure."
+
+directives:
+  - step: 1
+    phase: "The Unit of Work (Packet Model)"
+    action: "Implement src/app/core/packet.py"
+    rationale: "Establishes the 'Smart Packet' as the immutable carrier of payload and metadata, essential for the .through() contract."
+  
+  - step: 2
+    phase: "The Filter Contract (Middleware Port)"
+    action: "Define ABC MiddlewareProcessor"
+    requirement: "Implement process(packet) -> Iterator[Packet] to ensure any transformation follows the recursive streaming rule."
+  
+  - step: 3
+    phase: "The Pipe Contract (DataStream Port)"
+    action: "Define ABC DataStream"
+    rationale: "Provides a unified interface for sources and sinks, ensuring the PipelineBuilder is oblivious to physical I/O details."
+  
+  - step: 4
+    phase: "The Architect (PipelineBuilder)"
+    action: "Implement PipelineBuilder state-collector"
+    logic: "Aggregates source URIs, processors, and sink URIs; orchestrates execution via .run()."
+  
+  - step: 5
+    phase: "The Resolver (fsspec Integration)"
+    action: "Implement functional fsspec utility"
+    result: "Maps URI strings (s3://, file://) directly to DataStream handles without custom identity resolution bloat."
+  
+  - step: 6
+    phase: "The Front Door (Slalom Gateway)"
+    action: "Implement the Slalom entry point"
+    method: "Provides the polished app.pipeline(...) API for user-facing instantiation."

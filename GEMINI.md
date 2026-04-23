@@ -1,4 +1,14 @@
-# PROJECT MANDATE: ETL-Pipeline "Slalom" — Continuity & Architectural Audit
+# PROJECT MANDATE: ETL-Pipeline "Slalom" — Rebirth & Lean Orchestration
+
+> [!IMPORTANT]
+> **Foundational Authority:** All architectural decisions and implementations must adhere to the standards defined in:
+> - [Architecture Standards](.slalom/architecture.yml)
+> - [Design Workflows](.slalom/design.yml)
+> - [Implementation Roadmap](.slalom/roadmap.yml)
+> - [Documentation Ruleset](.slalom/documentation.yml)
+> - [Session History](.slalom/history.yml)
+> - [Operational Modes](.slalom/operational_modes.yml)
+> - [Versioning Standards](.slalom/versioning.yml)
 
 1. Primary Objective
 

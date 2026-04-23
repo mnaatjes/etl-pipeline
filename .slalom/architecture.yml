@@ -1,16 +1,46 @@
 header:
-  version: "0.9.0"
+  version: "0.1.0"
   project_name: Slalom
   id: "Project Architecture"
   purpose: "Define project-wide architectural guidelines"
   scope: "*"
-  updated_at: "2026-04-22"
+  updated_at: "2026-04-23"
   permissions: "readonly"
-# Main Directives for entire project scope
+
 principles:
   - name: Hexagonal Architecture (Ports & Adapters)
-    directive: "Isolate business logic from infrastructure. Engines (pipeline) are adapters; Core Blueprints are the domain."
-  - name: Architecture Governance
-    directives:
-      - "Architecture changes must be preceded by an ADR in docs/design/adr/."
-      - "Technical Design Documents (TDD) will be generated for detailed design plans and implementations"
+    directive: "Maintain a strict isolation between the functional ETL core (Domain) and external side-effects (Infrastructure). The Domain logic must be oblivious to the transport mechanism."
+  - name: Framework Gateway Pattern
+    directive: "The system provides a singular 'Smart Gateway' as the primary entry point. The Gateway is responsible for orchestrating Input Ports (Builders) and Output Ports (Adapters) without leaking implementation details to the consumer."
+  - name: Contract-First Integrity
+    directive: "Data moving between boundaries must adhere to strict schemas (Packet Models). Interfaces (ABCs) serve as the source of truth for all extensions."
+
+boundaries:
+  domain:
+    description: "The ETL engine, Packet models, and transformation logic."
+    rules:
+      - "Zero dependencies on infrastructure-specific libraries (e.g., httpx, pathlib)."
+      - "Logic must be testable using pure-python mocks."
+  infrastructure:
+    description: "Physical adapters for I/O (File, Network)."
+    rules:
+      - "Must implement the DataStream port."
+      - "Responsible for converting external raw data into Domain Packets."
+
+fitness_functions:
+  description: "Architectural Unit Testing (Automated Enforcement)"
+  objective: "Verify the system's 'Laws of Physics' programmatically via the test suite to prevent architectural drift."
+  tooling: "pytest-archon / import-linter"
+  enforcement_rules:
+    - name: "Strict Hexagonal Isolation"
+      directive: "The 'domain' layer must have zero imports from the 'infrastructure' layer."
+    - name: "Port Dependency Inversion"
+      directive: "Infrastructure adapters must only depend on Domain Ports (ABCs), never on concrete Use Cases or Managers."
+    - name: "Cycle Prevention"
+      directive: "Zero tolerance for circular dependencies between packages."
+
+governance:
+  directives:
+    - "Architecture changes must be preceded by an ADR in docs/explanation/reports/adr/."
+    - "Technical Design Documents (TDD) are required for all new feature implementations."
+    - "Fitness Functions must be executed as part of the CI/CD pipeline and local pre-commit hooks."

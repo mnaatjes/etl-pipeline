@@ -2,9 +2,9 @@ header:
   id: "Session Summary and History Information"
   purpose: "Lists previous Agent-Workflow session infomration and logs major tasks"
   scope: "*"
-  version: "0.9.0"
+  version: "0.1.0"
   project_name: Slalom
-  updated_at: "2026-04-22"
+  updated_at: "2026-04-23"
   permissions: "read, write"
 
 directives:
@@ -15,12 +15,12 @@ directives:
 
 project_metadata:
   name: "Slalom"
-  description: "ETL Pipeline Framework"
-  version: "0.9.0"
+  description: "Lean Streaming ETL Core"
+  version: "0.1.0"
   author: "Michael Naatjes"
   github_project: "slalom-pipeline"
   github_remote_repository: "https://github.com/mnaatjes/etl-pipeline.git"
-  updated_at: "2026-04-22"
+  updated_at: "2026-04-23"
 
 templates:
   global_template:

@@ -2,9 +2,9 @@ header:
   id: "Documentation Ruleset"
   purpose: "Defines documentation rules and workflows"
   scope: "docs/"
-  version: "0.9.0"
+  version: "0.1.0"
   project_name: Slalom
-  updated_at: "2026-04-22"
+  updated_at: "2026-04-23"
   permissions: "readonly"
 
 global_documentation_rules:
@@ -132,8 +132,8 @@ major_documenation_types:
 
   # After Action Review
   - AAR:
-    description: ""
-    objective: ""
+    description: "Systematically analyze the gap between intended architecture and actual implementation."
+    objective: "Provide data-driven recommendations for project continuity (Refactor vs. Rebuild)."
     directives:
       - evidence_based: "Every claim must be supported by commit hashes, test logs, or specific documentation lines."
       - actionable_output: "The end goal is a modification to the project mandate or workflow, not just a summary."

@@ -1,7 +1,11 @@
-# .slalom/versioning.yml
-project:
-  name: "slalom-versioning"
-  description: "Standards and workflows for version management, releases, and changelog maintenance."
+header:
+  version: "0.1.0"
+  project_name: Slalom
+  id: "Versioning Standards"
+  purpose: "Define standards for version management and release workflows"
+  scope: "src/__init__.py, CHANGELOG.md, .bumpversion.cfg"
+  updated_at: "2026-04-23"
+  permissions: "readonly"
 
 # Versioning Logic
 strategy:

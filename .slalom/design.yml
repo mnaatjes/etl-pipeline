@@ -1,17 +1,17 @@
 header:
-  version: "0.9.0"
+  version: "0.1.0"
   project_name: "Slalom"
   id: "Design Workflows"
   purpose: "Reference for design workflows"
   scope: "docs/, github-projects (gh) cli"
-  updated_at: "2026-04-22"
+  updated_at: "2026-04-23"
   permissions: "readonly"
 design_lifecycle:
   phases:
     1: "ADR Creation: Define 'Why' and 'What' in docs/explanation/reports/adr/."
     2: "ADR Approval: Reach consensus on the architectural direction."
     3: "Context Hydration: Integrate ADR rules into .context/ for agent alignment."
-    4: "TDD Drafting: Define 'How' in docs/explanation/design/ using the TDD Template."
+    4: "TDD Drafting: Define 'How' in docs/explanation/design/tdd/ using the TDD Template."
     5: "TDD Approval: Verify edge cases, state transitions, and dependency graphs."
     6: "Github Projects: Create a new issue linked to ADR and/or TDD documetation with explicit TODOs"
     7: "Implementation: Execute code based on the approved blueprint."
